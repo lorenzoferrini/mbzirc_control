@@ -4,8 +4,9 @@
 #include <Eigen/Core>
 #include <std_msgs/Float64.h>
 #include "geometry_msgs/Point.h"
-#include "mbzirc_control/triplePIDparam.h"
+#include "mbzirc_controller/triplePIDparam.h"
 #include <geometry_msgs/TwistStamped.h>
+#include <mavros_msgs/State.h>
 
 
 Eigen::VectorXd     targetPos(3);
@@ -25,7 +26,7 @@ void targetPosCallback( const geometry_msgs::Point::ConstPtr& target_pos ) {
 }
 
 
-void PIDparamSetCallback( const mbzirc_control::triplePIDparam::ConstPtr& K_PID )  {
+void PIDparamSetCallback( const mbzirc_controller::triplePIDparam::ConstPtr& K_PID )  {
 
   Kp(1,1) = K_PID->surge.Kp;
   Kd(1,1) = K_PID->surge.Kd;
@@ -75,7 +76,7 @@ int main(int argc, char **argv)
 
   // CREATE ROS PUBLISH OBJECTS
   ros::Publisher commandVel_pub = n.advertise<geometry_msgs::TwistStamped>("mavros/setpoint_velocity/cmd_vel", 1);
-  ros::Publisher PID_pub = n.advertise<mbzirc_control::triplePIDparam>("PID_param", 1);
+  ros::Publisher PID_pub = n.advertise<mbzirc_controller::triplePIDparam>("PID_param", 1);
 
   // SUBSCRIBE TO TOPICS
   ros::Subscriber subtaskSub  = n.subscribe("PIDparamSet", 1, PIDparamSetCallback);
@@ -85,7 +86,7 @@ int main(int argc, char **argv)
   ros::Rate loop_rate(10);
 
   geometry_msgs::TwistStamped      velRef;
-  mbzirc_control::triplePIDparam   PIDparam;
+  mbzirc_controller::triplePIDparam   PIDparam;
   std::vector<double>              windupMaxv;
 
   Eigen::VectorXd error(3);
