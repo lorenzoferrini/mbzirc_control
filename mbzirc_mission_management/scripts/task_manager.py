@@ -8,10 +8,19 @@ import smach_ros
 
 from std_msgs.msg import Empty
 from std_msgs.msg import String
+from mavros_msgs.msg import State
+from mavros_msgs.srv import CommandBool
+from mavros_msgs.srv import CommandTOL
+from mavros_msgs.srv import SetMode
+from nav_msgs.msg import Odometry
+from mbzirc_mission_management.msg import Task
+from time import sleep
 
 
 sm = smach.StateMachine(outcomes=['DONE'])
-
+mavros_state = State()
+mavros_odometry = Odometry()
+guided = False
 
 sub_task_pub = rospy.Publisher('sub_task', Task, queue_size=1, latch=True)
 
@@ -37,49 +46,81 @@ class SmInitialisation(smach.State):
 class GuidedModeSwitch(smach.State):
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['guided']
+                             outcomes=['guided_requested']
                              )
 
     def execute(self, userdata):
         rospy.wait_for_service('/mavros/set_mode')
-   try:
-       flightModeService = rospy.ServiceProxy('/mavros/set_mode', mavros_msgs.srv.SetMode)
-       isModeChanged = flightModeService(custom_mode='GUIDED') #return true or false
-       return 'guided'
-   except rospy.ServiceException, e:
-       print "service set_mode call failed: %s. Check if GPS is enabled"%e
+        try:
+            flightModeService = rospy.ServiceProxy('/mavros/set_mode', SetMode)
+            isModeChanged = flightModeService(custom_mode='GUIDED') #return true or false
+        except rospy.ServiceException, e:
+            print "service set_mode call failed: %s. Check if GPS is enabled"%e
+        return 'guided_requested'
 
 
 class ArmSwitch(smach.State):
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['guided']
+                             outcomes=['arm_requested']
                              )
 
     def execute(self, userdata):
         rospy.wait_for_service('/mavros/cmd/arming')
-   try:
-       armService = rospy.ServiceProxy('/mavros/cmd/arming', mavros_msgs.srv.CommandBool)
-       armService(True)
-       return 'armed'
-   except rospy.ServiceException, e:
-       print "Service arm call failed: %s"%e
+        try:
+            armService = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
+            armService(True)
+        except rospy.ServiceException, e:
+            print "Service arm call failed: %s"%e
+        return 'arm_requested'
 
 
 class TakeOff(smach.State):
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['guided']
+                             outcomes=['take_off_requested']
                              )
 
     def execute(self, userdata):
         rospy.wait_for_service('/mavros/cmd/takeoff')
-   try:
-       takeoffService = rospy.ServiceProxy('/mavros/cmd/takeoff', mavros_msgs.srv.CommandTOL)
-       takeoffService(altitude = 2, latitude = 0, longitude = 0, min_pitch = 0, yaw = 0)
-       return 'taken_off'
-   except rospy.ServiceException, e:
-       print "Service takeoff call failed: %s"%e
+        try:
+            takeoffService = rospy.ServiceProxy('/mavros/cmd/takeoff', CommandTOL)
+            takeoffService(altitude = 3, latitude = 0, longitude = 0, min_pitch = 0, yaw = 0)
+        except rospy.ServiceException, e:
+            print "Service takeoff call failed: %s"%e
+        return 'take_off_requested'
+
+class Land(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['land_requested']
+                             )
+
+    def execute(self, userdata):
+        rospy.wait_for_service('/mavros/cmd/land')
+        try:
+            landService = rospy.ServiceProxy('/mavros/cmd/land', CommandTOL)
+            isLanding = landService(altitude = 0, latitude = 0, longitude = 0, min_pitch = 0, yaw = 0)
+        except rospy.ServiceException, e:
+            print "service land call failed: %s. The vehicle cannot land "%e
+        return 'land_requested'
+
+
+
+class Search(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['target_found']
+                             )
+
+    def execute(self, userdata):
+        rospy.wait_for_service('/mavros/cmd/takeoff')
+        try:
+            takeoffService = rospy.ServiceProxy('/mavros/cmd/takeoff', CommandTOL)
+            takeoffService(altitude = 2, latitude = 0, longitude = 0, min_pitch = 0, yaw = 0)
+            return 'taken_off'
+        except rospy.ServiceException, e:
+            print "Service takeoff call failed: %s"%e
 
 
 
@@ -89,7 +130,41 @@ def task_cb(ud, msg):
     sm.userdata.next_task_reference = msg.reference
     return False
 
-def switching_condition_cb(ud, msg):
+def MavrosGuidedCallback(ud, msg):
+    global sm
+    sm.userdata.guided = msg.guided
+    print "Guided: %r"%sm.userdata.guided
+    # return sm.userdata.guided
+    if msg.guided:
+        return False
+    else:
+        return True
+
+def MavrosArmedCallback(ud, msg):
+    global sm
+    sm.userdata.armed = msg.armed
+    if msg.armed:
+        return False
+    else:
+        return True
+
+def MavrosTakeOffCallback(ud, msg):
+    global sm
+    sm.userdata.height = msg.pose.pose.position.z
+    if sm.userdata.height > 2.8:
+        return False
+    else:
+        return True
+
+def MavrosLandCallback(ud, msg):
+    global sm
+    sm.userdata.height = msg.pose.pose.position.z
+    if sm.userdata.height < 0.1:
+        return False
+    else:
+        return True
+
+def switching_condition_cb( msg):
     global reset_requested
     if msg.data == "SWITCH":
         return False
@@ -103,9 +178,6 @@ def switching_condition_cb(ud, msg):
         rospy.logwarn(msg.data)
         reset_requested = True
         return False
-
-
-
 
 def main():
     global sm
@@ -121,22 +193,70 @@ def main():
                          )
 
         sm.add('IDLE', smach_ros.MonitorState("/task", Task, task_cb),
-                               transitions={'invalid':'GUIDED_MODE',
+                               transitions={'invalid':'GUIDED_MODE_RQ',
                                             'valid':'IDLE',
                                             'preempted':'IDLE'})
 
 
-        sm.add('GUIDED_MODE',GuidedModeSwitch(),
-                            transitions = {'guided' : 'ARM'}
+        sm.add('GUIDED_MODE_RQ',GuidedModeSwitch(),
+                            transitions = {'guided_requested' : 'GUIDED_MODE_CHECK'}
                             )
 
-        sm.add('ARM',ArmSwitch(),
-                            transitions = {'armed' : 'TAKEOFF'}
+
+        sm.add('GUIDED_MODE_CHECK', smach_ros.MonitorState("/mavros/state", State, MavrosGuidedCallback),
+                                    transitions={'invalid':'ARM_RQ',
+                                                 'valid':'GUIDED_MODE_CHECK',
+                                                 'preempted':'GUIDED_MODE_CHECK'})
+
+        sm.add('ARM_RQ',ArmSwitch(),
+                            transitions = {'arm_requested' : 'ARM_CHECK'}
                             )
 
-        sm.add('TAKEOFF',TakeOff(),
-                            transitions = {'taken_off' : 'SEARCH'}
+
+        sm.add('ARM_CHECK', smach_ros.MonitorState("/mavros/state", State, MavrosArmedCallback),
+                                    transitions={'invalid':'TAKEOFF_RQ',
+                                                 'valid':'ARM_CHECK',
+                                                 'preempted':'ARM_CHECK'})
+
+        sm.add('TAKEOFF_RQ',TakeOff(),
+                            transitions = {'take_off_requested' : 'TAKEOFF_CHECK'}
                             )
+
+
+        sm.add('TAKEOFF_CHECK', smach_ros.MonitorState("/mavros/local_position/odom", Odometry, MavrosTakeOffCallback),
+                                    transitions={'invalid':'LAND_RQ',
+                                                 'valid':'TAKEOFF_CHECK',
+                                                 'preempted':'TAKEOFF_CHECK'})
+
+        sm.add('LAND_RQ',Land(),
+                            transitions = {'land_requested' : 'LAND_CHECK'}
+                            )
+
+
+        sm.add('LAND_CHECK', smach_ros.MonitorState("/mavros/local_position/odom", Odometry, MavrosLandCallback),
+                                    transitions={'invalid':'IDLE',
+                                                 'valid':'LAND_CHECK',
+                                                 'preempted':'LAND_CHECK'})
+
+
+        # sm.add('SEARCH',Search(),
+        #                     transitions = {'target_found' : 'CHASE'}
+        #                     )
+        #
+        # sm.add('CHASE',Chase(),
+        #                     transitions = {'taken_locked' : 'CATCH',
+        #                     'taken_lost' : 'ABORT'}
+        #                     )
+        #
+        # sm.add('CATCH',Catch(),
+        #                     transitions = {'taken_locked' : 'CATCH',
+        #                                    'taken_lost' : 'ABORT'}
+        #                     )
+        #
+        # sm.add('ABORT',Abort(),
+        #                     transitions = {'aborted' : 'SEARCH'}
+        #                     )
+
 
 
     #sis = smach_ros.IntrospectionServer('smach_server', sm, '/SM_ROOT')

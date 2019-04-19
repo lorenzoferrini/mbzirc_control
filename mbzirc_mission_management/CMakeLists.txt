@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(mission_management)
+project(mbzirc_mission_management)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -8,16 +8,16 @@ project(mission_management)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  folaga_control_system
-  folaga_msgs
   geometry_msgs
   message_generation
   message_runtime
+  mavros_msgs
+  nav_msgs
+  sensor_msgs
   roscpp
   rospy
   smach
   std_msgs
-  folaga_lib
 )
 
 ## System dependencies are found with CMake's conventions
@@ -56,11 +56,10 @@ find_package(Eigen REQUIRED)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  Task.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -77,10 +76,9 @@ find_package(Eigen REQUIRED)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   folaga_msgs#   geometry_msgs#   std_msgs
-# )
+ generate_messages(
+   DEPENDENCIES  std_msgs mavros_msgs
+ )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -114,8 +112,7 @@ find_package(Eigen REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES mission_management
-#  CATKIN_DEPENDS folaga_msgs geometry_msgs message_generation message_runtime roscpp rospy smach std_msgs folaga_lib
-  CATKIN_DEPENDS folaga_msgs roscpp rospy std_msgs message_runtime folaga_lib
+  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
 #  CATKIN_DEPENDS folaga_lib
 #  DEPENDS system_lib
 )
@@ -137,14 +134,12 @@ include_directories(
 #   src/${PROJECT_NAME}/mission_management.cpp
 # )
 
-add_executable(checking_condition src/checking_condition.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-add_dependencies(checking_condition ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
@@ -165,8 +160,6 @@ add_dependencies(checking_condition ${catkin_EXPORTED_TARGETS})
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
 # )
-
-target_link_libraries(checking_condition ${catkin_LIBRARIES})
 
 #############
 ## Install ##

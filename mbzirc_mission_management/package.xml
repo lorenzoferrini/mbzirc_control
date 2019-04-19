@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>mission_management</name>
+  <name>mbzirc_mission_management</name>
   <version>0.0.0</version>
   <description>The mission_management package</description>
 
