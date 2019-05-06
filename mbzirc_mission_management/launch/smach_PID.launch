@@ -1,0 +1,4 @@
+<launch>
+  <node pkg="mbzirc_controller" name="PID_controller" type="basic_PID" output="screen" />
+  <node pkg="mbzirc_mission_management" name="smach" type="task_manager.py" output="screen" />
+</launch>

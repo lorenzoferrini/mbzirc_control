@@ -8,6 +8,7 @@ import smach_ros
 
 from std_msgs.msg import Empty
 from std_msgs.msg import String
+from std_msgs.msg import Bool
 from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandBool
 from mavros_msgs.srv import CommandTOL
@@ -23,6 +24,7 @@ mavros_odometry = Odometry()
 guided = False
 
 sub_task_pub = rospy.Publisher('sub_task', Task, queue_size=1, latch=True)
+task_id_pub = rospy.Publisher('/smach/task_id', String, queue_size = 1)
 
 next_task_task_type = ""
 next_task_reference = []
@@ -105,22 +107,31 @@ class Land(smach.State):
             print "service land call failed: %s. The vehicle cannot land "%e
         return 'land_requested'
 
-
-
 class Search(smach.State):
     def __init__(self):
         smach.State.__init__(self,
-                             outcomes=['target_found']
+                             outcomes=['search_requested']
                              )
 
     def execute(self, userdata):
-        rospy.wait_for_service('/mavros/cmd/takeoff')
-        try:
-            takeoffService = rospy.ServiceProxy('/mavros/cmd/takeoff', CommandTOL)
-            takeoffService(altitude = 2, latitude = 0, longitude = 0, min_pitch = 0, yaw = 0)
-            return 'taken_off'
-        except rospy.ServiceException, e:
-            print "Service takeoff call failed: %s"%e
+        task_id = String()
+        task_id.data = "SEARCH"
+        task_id_pub.publish(task_id)
+        return 'search_requested'
+
+class Chase(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['chase_requested']
+                             )
+
+    def execute(self, userdata):
+        task_id = String()
+        task_id.data = "CHASE"
+        task_id_pub = rospy.Publisher('/smach/task_id', String, queue_size = 1)
+        task_id_pub.publish(task_id)
+        return 'chase_requested'
+
 
 
 
@@ -143,7 +154,7 @@ def MavrosGuidedCallback(ud, msg):
 def MavrosArmedCallback(ud, msg):
     global sm
     sm.userdata.armed = msg.armed
-    if msg.armed:
+    if msg.armed or rospy.is_shutdown():
         return False
     else:
         return True
@@ -151,7 +162,7 @@ def MavrosArmedCallback(ud, msg):
 def MavrosTakeOffCallback(ud, msg):
     global sm
     sm.userdata.height = msg.pose.pose.position.z
-    if sm.userdata.height > 2.8:
+    if sm.userdata.height > 2.8  or rospy.is_shutdown():
         return False
     else:
         return True
@@ -159,10 +170,19 @@ def MavrosTakeOffCallback(ud, msg):
 def MavrosLandCallback(ud, msg):
     global sm
     sm.userdata.height = msg.pose.pose.position.z
-    if sm.userdata.height < 0.1:
+    if sm.userdata.height < 0.1  or rospy.is_shutdown():
         return False
     else:
         return True
+
+def SearchCallback(ud, msg):
+    global sm
+    sm.userdata.targetlocked = msg
+    if sm.userdata.targetlocked  or rospy.is_shutdown():
+        return False
+    else:
+        return True
+
 
 def switching_condition_cb( msg):
     global reset_requested
@@ -179,10 +199,12 @@ def switching_condition_cb( msg):
         reset_requested = True
         return False
 
+
 def main():
     global sm
 
     rospy.init_node("task_manager")
+
 
     sm.set_initial_state(['INITIALISATION'])
 
@@ -224,7 +246,7 @@ def main():
 
 
         sm.add('TAKEOFF_CHECK', smach_ros.MonitorState("/mavros/local_position/odom", Odometry, MavrosTakeOffCallback),
-                                    transitions={'invalid':'LAND_RQ',
+                                    transitions={'invalid':'SEARCH_RQ',
                                                  'valid':'TAKEOFF_CHECK',
                                                  'preempted':'TAKEOFF_CHECK'})
 
@@ -239,14 +261,19 @@ def main():
                                                  'preempted':'LAND_CHECK'})
 
 
-        # sm.add('SEARCH',Search(),
-        #                     transitions = {'target_found' : 'CHASE'}
-        #                     )
-        #
-        # sm.add('CHASE',Chase(),
-        #                     transitions = {'taken_locked' : 'CATCH',
-        #                     'taken_lost' : 'ABORT'}
-        #                     )
+        sm.add('SEARCH_RQ',Search(),
+                            transitions = {'search_requested' : 'SEARCHING'}
+                            )
+
+
+        sm.add('SEARCHING', smach_ros.MonitorState("/tagetlocked", Bool, SearchCallback),
+                                    transitions={'invalid':'CHASE',
+                                                 'valid':'LAND_CHECK',
+                                                 'preempted':'LAND_CHECK'})
+
+        sm.add('CHASE',Chase(),
+                            transitions = {'chase_requested' : 'LAND_RQ'}
+                            )
         #
         # sm.add('CATCH',Catch(),
         #                     transitions = {'taken_locked' : 'CATCH',
@@ -256,7 +283,7 @@ def main():
         # sm.add('ABORT',Abort(),
         #                     transitions = {'aborted' : 'SEARCH'}
         #                     )
-
+        #
 
 
     #sis = smach_ros.IntrospectionServer('smach_server', sm, '/SM_ROOT')
