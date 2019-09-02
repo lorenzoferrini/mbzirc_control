@@ -5,10 +5,13 @@ import math
 import rospy
 import smach
 import smach_ros
+import time
+import threading
 
 from std_msgs.msg import Empty
 from std_msgs.msg import String
 from std_msgs.msg import Bool
+from geometry_msgs.msg import Point
 from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandBool
 from mavros_msgs.srv import CommandTOL
@@ -119,7 +122,7 @@ class Search(smach.State):
         task_id_pub.publish(task_id)
         return 'search_requested'
 
-class Chase(smach.State):
+class ChaseRQ(smach.State):
     def __init__(self):
         smach.State.__init__(self,
                              outcomes=['chase_requested']
@@ -131,6 +134,50 @@ class Chase(smach.State):
         task_id_pub = rospy.Publisher('/smach/task_id', String, queue_size = 1)
         task_id_pub.publish(task_id)
         return 'chase_requested'
+
+# class Chase(smach.State):
+#     def __init__(self):
+#         smach.State.__init__(self, outcomes=['target_locked','target_lost'])
+#
+#         self.subscriber = rospy.Subscriber("targetPos", Point, self.ChaseCallback)
+#         self.subscriber = rospy.Subscriber("/target_found", Bool, self.LostCallback)
+#         self.mutex = threading.Lock() # non so se serva sta roba
+#         self.target_locked = False
+#         self.target_lost = False
+#         self.distance = 100
+#
+#     def ChaseCallback(self, data):
+#         self.mutex.acquire()
+#         self.distance = data.z
+#         if self.distance < 2 :
+#             self.target_locked = True
+#             print("The target distance is: %6.2f" % (self.distance))
+#         self.mutex.release()
+#
+#     def LostCallback(self, data):
+#         self.mutex.acquire()
+#         if not data.data:
+#             self.target_lost = True
+#             print("The target distance is: %6.2f" % (self.distance))
+#         self.mutex.release()
+#
+#     def execute(self, userdata):
+#         while 1:
+#              self.mutex.acquire()
+#              if self.target_lost:
+#                 return 'target_lost'
+#              if self.target_locked:
+#                return 'target_locked'
+#              self.mutex.release()
+#              time.sleep(.01)
+class Abort(smach.State):
+    def __init__(self):
+        smach.State.__init__(self,
+                             outcomes=['aborted']
+                             )
+
+    def execute(self, userdata):
+        return 'aborted'
 
 
 
@@ -177,11 +224,21 @@ def MavrosLandCallback(ud, msg):
 
 def SearchCallback(ud, msg):
     global sm
-    sm.userdata.targetlocked = msg
+    sm.userdata.targetlocked = False;
+    sm.userdata.targetlocked = msg.data
     if sm.userdata.targetlocked  or rospy.is_shutdown():
         return False
     else:
         return True
+
+def ChaseCallback(ud, msg):
+    global sm
+    sm.userdata.targetlocked = False;
+    sm.userdata.targetlocked = msg.data
+    if sm.userdata.targetlocked :
+        return True
+    else:
+        return False
 
 
 def switching_condition_cb( msg):
@@ -266,28 +323,29 @@ def main():
                             )
 
 
-        sm.add('SEARCHING', smach_ros.MonitorState("/tagetlocked", Bool, SearchCallback),
-                                    transitions={'invalid':'CHASE',
-                                                 'valid':'LAND_CHECK',
-                                                 'preempted':'LAND_CHECK'})
+        sm.add('SEARCHING', smach_ros.MonitorState("/target_found", Bool, SearchCallback),
+                                    transitions={'invalid':'CHASE_RQ',
+                                                 'valid':'SEARCHING',
+                                                 'preempted':'SEARCHING'})
 
-        sm.add('CHASE',Chase(),
-                            transitions = {'chase_requested' : 'LAND_RQ'}
+        sm.add('CHASE_RQ',ChaseRQ(),
+                            transitions = {'chase_requested' : 'CHASING'}
                             )
-        #
-        # sm.add('CATCH',Catch(),
-        #                     transitions = {'taken_locked' : 'CATCH',
-        #                                    'taken_lost' : 'ABORT'}
+
+        sm.add('CHASING', smach_ros.MonitorState("/target_found", Bool, ChaseCallback),
+                                    transitions={'invalid':'SEARCH_RQ',
+                                                 'valid':'CHASING',
+                                                 'preempted':'CHASING'})
+
+        # sm.add('CATCH',Abort(),
+        #                     transitions = {'aborted' : 'SEARCHING'}
         #                     )
-        #
-        # sm.add('ABORT',Abort(),
-        #                     transitions = {'aborted' : 'SEARCH'}
-        #                     )
-        #
+
 
 
     #sis = smach_ros.IntrospectionServer('smach_server', sm, '/SM_ROOT')
     #sis.start()
+    print("wowowowowo")
     sm.execute()
     rospy.spin()
     #sis.stop()

@@ -36,15 +36,15 @@ void targetPosCallback( const geometry_msgs::Point::ConstPtr& target_pos ) {
 
 void PIDparamSetCallback( const mbzirc_controller::triplePIDparam::ConstPtr& K_PID )  {
 
-  Kp(0,0) = K_PID->surge.Kp;
-  Kd(0,0) = K_PID->surge.Kd;
-  Ki(0,0) = K_PID->surge.Ki;
+  Kp(2,2) = K_PID->surge.Kp;
+  Kd(2,2) = K_PID->surge.Kd;
+  Ki(2,2) = K_PID->surge.Ki;
   Kp(1,1) = K_PID->height.Kp;
   Kd(1,1) = K_PID->height.Kd;
   Ki(1,1) = K_PID->height.Ki;
-  Kp(2,2) = K_PID->yaw.Kp;
-  Kd(2,2) = K_PID->yaw.Kd;
-  Ki(2,2) = K_PID->yaw.Ki;
+  Kp(0,0) = K_PID->yaw.Kp;
+  Kd(0,0) = K_PID->yaw.Kd;
+  Ki(0,0) = K_PID->yaw.Ki;
   errorI << 0,0,0;   // initlize integral error to 0 every time a new param assignation
   derInit = 0;       // to avoid spikes of the first errorD
 
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 
   // SUBSCRIBE TO TOPICS
   ros::Subscriber subtaskSub  = n.subscribe("PIDparamSet", 1, PIDparamSetCallback);
-  ros::Subscriber targetPosSub = n.subscribe("targetPos",1, targetPosCallback);
+  ros::Subscriber targetPosSub = n.subscribe("target_pos",1, targetPosCallback);
   ros::Subscriber state_sub = n.subscribe("mavros/state", 1, stateCallback);
   ros::Subscriber taskID_sub = n.subscribe("/smach/task_id", 1, TaskIDCallback);
   ros::Subscriber odom_sub = n.subscribe("/mavros/local_position/odom", 1, OdomCallback);
@@ -262,12 +262,15 @@ int main(int argc, char **argv)
         //Update ros message
 
 
-        velRef.twist.linear.x = vel_ref(0);
+        velRef.twist.linear.x = vel_ref(2);
         velRef.twist.linear.y = 0;
         velRef.twist.linear.z = vel_ref(1);
         velRef.twist.angular.x = 0;
         velRef.twist.angular.y = 0;
-        velRef.twist.angular.z = vel_ref(2);
+        velRef.twist.angular.z = vel_ref(0);
+
+        // std::cout << "Here is the vector v:\n" << vel_ref << std::endl;
+        // std::cout << "Here is the vector error\n" << error << std::endl;
 
         PIDparam.surge.Kp = Kp(0,0);
         PIDparam.surge.Kd = Kd(0,0);

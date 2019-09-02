@@ -1,0 +1,6 @@
+
+<launch>
+  <node pkg="mbzirc_controller" name="PID_controller" type="basic_PID" output="screen" />
+  <node pkg="mbzirc_mission_management" name="state_machine" type="task_manager.py" output="screen" />
+  <node name="computer_vision" pkg="mbzirc_vision" type="videoprocess.py" output="screen" />
+</launch>
