@@ -5,6 +5,7 @@
 #include </usr/local/include/eigen3/Eigen/Core>
 #include <std_msgs/Float64.h>
 #include <std_msgs/String.h>
+#include<algorithm>
 #include "geometry_msgs/Point.h"
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -28,10 +29,15 @@ std::string task_id;
 
 mavros_msgs::State current_state;
 
-long float globalTime=0.1;
+float globalTime=0.1;
 
 int VEL_CAP=7;
 float K=0.2;
+
+float dumb_min(float a, float b){
+  if(a<=b) return a;
+  return b;
+}
 
 void targetPosCallback( const geometry_msgs::Point::ConstPtr& target_pos ) {
   // Update the target state of the AUV
@@ -80,7 +86,7 @@ void TaskIDCallback( const std_msgs::String::ConstPtr& task )  {
 int main(int argc, char **argv)
 {
 
-  ros::init(argc, argv, "basic_PID");
+  ros::init(argc, argv, "interceptor_controller");
 
   ros::NodeHandle n;
 
@@ -146,7 +152,7 @@ int main(int argc, char **argv)
       }
       aux=currTargetPos-currDronePos; //vector from drone to TGT
       float dist=aux.norm();
-      float vel=std::min(VEL_CAP,K*dist);
+      float vel=dumb_min(VEL_CAP,K*dist);
       aux=currTargetPos+ targetLinearVel*(vel/dist); //predicted position of the TGT
       aux=aux-currDronePos; //vector connecting from drone to the predicted position of tgt
       /*
@@ -174,7 +180,6 @@ int main(int argc, char **argv)
     }//end of chase if
 
     //Publish the updated data
-    PID_pub.publish(PIDparam);
     ros::spinOnce(); //call all the callbacks once
     loop_rate.sleep();
     secs_fin = ros::Time::now().toSec();
