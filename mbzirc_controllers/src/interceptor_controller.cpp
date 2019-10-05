@@ -85,7 +85,8 @@ void TaskIDCallback( const std_msgs::String::ConstPtr& task )  {
 
 int main(int argc, char **argv)
 {
-
+  
+  std::cout<< "immalive\n" ;//debug
   ros::init(argc, argv, "interceptor_controller");
 
   ros::NodeHandle n;
@@ -117,7 +118,8 @@ int main(int argc, char **argv)
   
   while ( ros::ok() )
   {
-
+    std::cout<< "ros is still spinning;task type:" ;//debug
+    std::cout<< task_id.c_str()<<std::endl ;//debug
     if( !strcmp(task_id.c_str(),"SEARCH" ) ) {
 
         if(searchInit) 
@@ -179,7 +181,7 @@ int main(int argc, char **argv)
       commandVel_pub.publish(velCmd);
     }//end of chase if
 
-    //Publish the updated data
+    //#TODO:failsafe PLEASE NOTE: if no valid task id is given, then the node will publish no commands!
     ros::spinOnce(); //call all the callbacks once
     loop_rate.sleep();
     secs_fin = ros::Time::now().toSec();

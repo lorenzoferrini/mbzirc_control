@@ -40,3 +40,7 @@ target_link_libraries(basic_PID ${catkin_LIBRARIES})
 add_executable(interceptor src/interceptor_controller.cpp)
 add_dependencies(interceptor ${catkin_EXPORTED_TARGETS})
 target_link_libraries(interceptor ${catkin_LIBRARIES})
+
+add_executable(tgt_sim src/interceptor_tgt_simulator.cpp)
+add_dependencies(tgt_sim ${catkin_EXPORTED_TARGETS})
+target_link_libraries(tgt_sim ${catkin_LIBRARIES})
