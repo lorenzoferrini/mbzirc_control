@@ -148,7 +148,7 @@ int main(int argc, char **argv)
       float dist=aux.norm();
       float vel=std::min(VEL_CAP,K*dist);
       aux=currTargetPos+ targetLinearVel*(vel/dist); //predicted position of the TGT
-      aux=aux-currDronePos; //vector connecting the drone and the predicted position of tgt
+      aux=aux-currDronePos; //vector connecting from drone to the predicted position of tgt
       /*
       vel=vel*aux.norm()/dist;
       dist=aux.norm();
@@ -156,7 +156,7 @@ int main(int argc, char **argv)
       this algorithms has some mathematical fallacies, but it's also simple and working
       so this part is not necessary
       */
-      aux=aux*(vel/aux.norm());
+      aux=aux*(vel/aux.norm()); //normalization plus velocity vector
       velCmd.twist.linear.x = aux(0);
       velCmd.twist.linear.y = aux(1);
       velCmd.twist.linear.z = aux(2);
@@ -175,7 +175,7 @@ int main(int argc, char **argv)
 
     //Publish the updated data
     PID_pub.publish(PIDparam);
-    ros::spinOnce();
+    ros::spinOnce(); //call all the callbacks once
     loop_rate.sleep();
     secs_fin = ros::Time::now().toSec();
   }//end of ros main loop
