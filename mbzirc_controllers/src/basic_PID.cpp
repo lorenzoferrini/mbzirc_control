@@ -160,7 +160,8 @@ int main(int argc, char **argv)
 
     if( !strcmp(task_id.c_str(),"SEARCH" ) ) {
 
-        if(searchInit) secs_start = ros::Time::now().toSec();
+        if(searchInit) 
+          secs_start = ros::Time::now().toSec();
         secs_fin = ros::Time::now().toSec();
         Dt = secs_fin - secs_start;
         //                  DA AGGIUSTARE !!!!!!!!
@@ -238,7 +239,7 @@ int main(int argc, char **argv)
 
         }
     searchInit=0;
-    }
+    } //end of search state if
 
     if( !strcmp(task_id.c_str(),"CHASE" ) ) {
 
@@ -291,7 +292,7 @@ int main(int argc, char **argv)
     ros::spinOnce();
     loop_rate.sleep();
     secs_fin = ros::Time::now().toSec();
-  }
+  }//end of ros main loop
 
 
   return 0;
