@@ -36,3 +36,7 @@ include_directories(
 add_executable(basic_PID src/basic_PID.cpp)
 add_dependencies(basic_PID ${catkin_EXPORTED_TARGETS})
 target_link_libraries(basic_PID ${catkin_LIBRARIES})
+
+add_executable(interceptor src/interceptor_controller.cpp)
+add_dependencies(interceptor ${catkin_EXPORTED_TARGETS})
+target_link_libraries(interceptor ${catkin_LIBRARIES})
