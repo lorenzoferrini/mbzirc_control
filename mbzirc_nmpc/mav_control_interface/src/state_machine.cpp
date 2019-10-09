@@ -31,8 +31,8 @@ StateMachineDefinition::StateMachineDefinition(const ros::NodeHandle& nh, const 
      private_nh_(private_nh),
      controller_(controller)
 {
-  command_publisher_ = nh_.advertise<mav_msgs::RollPitchYawrateThrust>(
-      mav_msgs::default_topics::COMMAND_ROLL_PITCH_YAWRATE_THRUST, 1);
+  command_publisher_ = nh_.advertise<mavros_msgs::AttitudeTarget>(
+      "mavros/setpoint_raw/attitude", 1);
 
   current_reference_publisher_ = nh_.advertise<trajectory_msgs::MultiDOFJointTrajectory>(
       "command/current_reference", 1);
@@ -42,7 +42,7 @@ StateMachineDefinition::StateMachineDefinition(const ros::NodeHandle& nh, const 
   private_nh_.param<bool>("use_rc_teleop", use_rc_teleop_, true);
   private_nh_.param<std::string>("reference_frame", reference_frame_id_, "odom");
   predicted_state_publisher_ = nh_.advertise<visualization_msgs::Marker>( "predicted_state", 0 );
-  full_predicted_state_publisher_ = 
+  full_predicted_state_publisher_ =
     nh_.advertise<trajectory_msgs::MultiDOFJointTrajectory>( "full_predicted_state", 1 );
 }
 
@@ -54,15 +54,27 @@ void StateMachineDefinition::SetParameters(const Parameters& parameters)
 void StateMachineDefinition::PublishAttitudeCommand (
     const mav_msgs::EigenRollPitchYawrateThrust& command) const
 {
-  mav_msgs::RollPitchYawrateThrustPtr msg(new mav_msgs::RollPitchYawrateThrust);
+  mavros_msgs::AttitudeTarget msg;
 
   mav_msgs::EigenRollPitchYawrateThrust tmp_command = command;
   tmp_command.thrust.x() = 0;
   tmp_command.thrust.y() = 0;
   tmp_command.thrust.z() = std::max(0.0, command.thrust.z());
+  float roll, pitch, yaw;
 
-  msg->header.stamp = ros::Time::now();  // TODO(acmarkus): get from msg
-  mav_msgs::msgRollPitchYawrateThrustFromEigen(command, msg.get());
+  roll = command.roll;
+  pitch = command.pitch;
+  yaw = command.yaw_rate;
+  Eigen::Quaternionf q;
+  q = Eigen::AngleAxisf(roll, Eigen::Vector3f::UnitX())
+    * Eigen::AngleAxisf(pitch, Eigen::Vector3f::UnitY())
+    * Eigen::AngleAxisf(yaw, Eigen::Vector3f::UnitZ());
+
+  msg.header.stamp = ros::Time::now();  // TODO(acmarkus): get from msg
+  msg.orientation.x = q.x();
+  msg.orientation.y = q.y();
+  msg.orientation.z = q.z();
+  msg.orientation.w = q.w();
   command_publisher_.publish(msg);
 }
 

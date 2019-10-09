@@ -37,12 +37,15 @@ int main( )
     DifferentialState position3; //z_w
     Control roll_ref;
     Control pitch_ref;
+    Control yaw_ref;
     Control thrust;
 
     OnlineData roll_tau;
     OnlineData roll_gain;
     OnlineData pitch_tau;
     OnlineData pitch_gain;
+    OnlineData yaw_tau;
+    OnlineData yaw_gain;
     OnlineData linear_drag_coefficient1;
     OnlineData linear_drag_coefficient2;
     OnlineData external_forces1;
@@ -65,7 +68,7 @@ int main( )
     f << dot(velocity3)   == (-g + cos(pitch)*cos(roll)*thrust + external_forces3);
     f << dot( roll )      == (roll_gain*roll_ref - roll)/roll_tau;
     f << dot( pitch )     == (pitch_gain*pitch_ref - pitch)/pitch_tau;
-    f << dot( yaw )       == 0;
+    f << dot( yaw )       == (yaw_gain*yaw_ref - yaw)/yaw_tau;;
     f << dot( position1 ) == velocity1;
     f << dot( position2 ) == velocity2;
     f << dot( position3 ) == velocity3;

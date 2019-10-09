@@ -16,6 +16,8 @@ roll_time_constant: 0.257
 roll_gain: 0.75
 pitch_time_constant: 0.259
 pitch_gain: 0.78
+yaw_time_constant: 0.07
+yaw_gain: 0.75
 linear_drag_coefficients: [0.01, 0.01, 0]
 
 # dynamic config default values:

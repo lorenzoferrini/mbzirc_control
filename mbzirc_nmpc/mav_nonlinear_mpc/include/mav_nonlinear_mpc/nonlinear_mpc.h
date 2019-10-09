@@ -160,6 +160,8 @@ class NonlinearModelPredictiveControl
   double roll_gain_;
   double pitch_time_constant_;
   double pitch_gain_;
+  double yaw_time_constant_;
+  double yaw_gain_;
   Eigen::Vector3d drag_coefficients_;
 
   // controller parameters

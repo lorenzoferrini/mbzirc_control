@@ -117,6 +117,17 @@ void NonlinearModelPredictiveControl::initializeParameters()
     abort();
   }
 
+  if (!private_nh_.getParam("yaw_time_constant", yaw_time_constant_)) {
+    ROS_ERROR(
+        "yaw_time_constant in nonlinear MPC controller is not loaded from ros parameter server");
+    abort();
+  }
+
+  if (!private_nh_.getParam("yaw_gain", yaw_gain_)) {
+    ROS_ERROR("yaw_gain in nonlinear MPC controller is not loaded from ros parameter server");
+    abort();
+  }
+
   if (!private_nh_.getParam("linear_drag_coefficients", drag_coefficients)) {
     ROS_ERROR(
         "linear_drag_coefficients in nonlinear MPC controller is not loaded from ros parameter server");
@@ -149,7 +160,7 @@ void NonlinearModelPredictiveControl::initializeParameters()
   }
 
   for (int i = 0; i < ACADO_N + 1; i++) {
-    acado_online_data_.block(i, 0, 1, ACADO_NOD) << roll_time_constant_, roll_gain_, pitch_time_constant_, pitch_gain_, drag_coefficients_(
+    acado_online_data_.block(i, 0, 1, ACADO_NOD) << roll_time_constant_, roll_gain_, pitch_time_constant_, pitch_gain_, yaw_time_constant_, yaw_gain_, drag_coefficients_(
         0), drag_coefficients_(1), 0, 0, 0;
   }
 
@@ -374,10 +385,11 @@ void NonlinearModelPredictiveControl::calculateRollPitchYawrateThrustCommand(
 
   double roll_ref = acadoVariables.u[0];
   double pitch_ref = acadoVariables.u[1];
-  double thrust_ref = acadoVariables.u[2];
+  double yaw_ref = acadoVariables.u[2];
+  double thrust_ref = acadoVariables.u[3];
 
   if (std::isnan(roll_ref) || std::isnan(pitch_ref) || std::isnan(thrust_ref)
-      || acado_status != 0) {
+  || std::isnan(yaw_ref) || acado_status != 0) {
     ROS_WARN_STREAM("Nonlinear MPC: Solver failed with status: " << acado_status);
     ROS_WARN("reinitializing...");
     initializeAcadoSolver (x_0);
@@ -385,33 +397,33 @@ void NonlinearModelPredictiveControl::calculateRollPitchYawrateThrustCommand(
     return;
   }
 
-  command_roll_pitch_yaw_thrust_ << roll_ref, pitch_ref, yaw_ref_.front(), thrust_ref;
+  command_roll_pitch_yaw_thrust_ << roll_ref, pitch_ref, yaw_ref, thrust_ref;
 
   state_ = Eigen::Map<Eigen::Matrix<double, ACADO_N + 1, ACADO_NX, Eigen::RowMajor>>(
       acadoVariables.x);
 
-  // yaw controller
-  double yaw_error = yaw_ref_.front() - current_yaw;
+  // // yaw controller
+  // double yaw_error = yaw_ref_.front() - current_yaw;
+  //
+  // if (std::abs(yaw_error) > M_PI) {
+  //   if (yaw_error > 0.0) {
+  //     yaw_error = yaw_error - 2.0 * M_PI;
+  //   } else {
+  //     yaw_error = yaw_error + 2.0 * M_PI;
+  //   }
+  // }
+  //
+  // double yaw_rate_cmd = K_yaw_ * yaw_error + yaw_rate_ref_.front();  // feed-forward yaw_rate cmd
+  //
+  // if (yaw_rate_cmd > yaw_rate_limit_) {
+  //   yaw_rate_cmd = yaw_rate_limit_;
+  // }
+  //
+  // if (yaw_rate_cmd < -yaw_rate_limit_) {
+  //   yaw_rate_cmd = -yaw_rate_limit_;
+  // }
 
-  if (std::abs(yaw_error) > M_PI) {
-    if (yaw_error > 0.0) {
-      yaw_error = yaw_error - 2.0 * M_PI;
-    } else {
-      yaw_error = yaw_error + 2.0 * M_PI;
-    }
-  }
-
-  double yaw_rate_cmd = K_yaw_ * yaw_error + yaw_rate_ref_.front();  // feed-forward yaw_rate cmd
-
-  if (yaw_rate_cmd > yaw_rate_limit_) {
-    yaw_rate_cmd = yaw_rate_limit_;
-  }
-
-  if (yaw_rate_cmd < -yaw_rate_limit_) {
-    yaw_rate_cmd = -yaw_rate_limit_;
-  }
-
-  *ref_attitude_thrust = Eigen::Vector4d(roll_ref, pitch_ref, yaw_rate_cmd, mass_ * thrust_ref);
+  *ref_attitude_thrust = Eigen::Vector4d(roll_ref, pitch_ref, yaw_ref, mass_ * thrust_ref);
 
   double diff_time = (ros::WallTime::now() - starting_time).toSec();
 
@@ -424,7 +436,7 @@ void NonlinearModelPredictiveControl::calculateRollPitchYawrateThrustCommand(
       ROS_INFO_STREAM("Controller loop time : " << diff_time*1000.0 << " ms");
 
       ROS_INFO_STREAM(
-          "roll ref: " << command_roll_pitch_yaw_thrust_(0) << "\t" << "pitch ref : \t" << command_roll_pitch_yaw_thrust_(1) << "\t" << "yaw ref : \t" << command_roll_pitch_yaw_thrust_(2) << "\t" << "thrust ref : \t" << command_roll_pitch_yaw_thrust_(3) << "\t" << "yawrate ref : \t" << yaw_rate_cmd);
+          "roll ref: " << command_roll_pitch_yaw_thrust_(0) << "\t" << "pitch ref : \t" << command_roll_pitch_yaw_thrust_(1) << "\t" << "yaw ref : \t" << command_roll_pitch_yaw_thrust_(2) << "\t" << "thrust ref : \t" << command_roll_pitch_yaw_thrust_(3) );
       counter = 0;
     }
     counter++;
@@ -533,7 +545,7 @@ bool NonlinearModelPredictiveControl::getPredictedState(
     pnt.orientation_W_B.y() = tf_orientation.y();
     pnt.orientation_W_B.z() = tf_orientation.z();
     pnt.orientation_W_B.w() = tf_orientation.w();
-                
+
     pnt.time_from_start_ns = static_cast<int64_t>(i) *
                            static_cast<int64_t>(sampling_time_ * 1000000000.0);
     pnt.timestamp_ns = odometry_.timestamp_ns + pnt.time_from_start_ns;

@@ -33,8 +33,15 @@
 
 #include <mav_msgs/conversions.h>
 #include <mav_msgs/eigen_mav_msgs.h>
+#include <mavros_msgs/AttitudeTarget.h>
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
+
+#include <Eigen/Geometry>
+#include <Eigen/Dense>
+#include <cmath>
+#include <mavros_msgs/State.h>
+#include <iostream>
 
 #include <mav_control_interface/position_controller_interface.h>
 #include <mav_control_interface/rc_interface.h>
