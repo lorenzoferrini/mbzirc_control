@@ -2,7 +2,7 @@
 #include <math.h>
 #include<cstdlib>
 #include <iostream>
-#include </usr/local/include/eigen3/Eigen/Core>
+#include <Eigen/Core>
 #include <std_msgs/Float64.h>
 #include <std_msgs/String.h>
 #include "geometry_msgs/Point.h"
@@ -160,7 +160,7 @@ int main(int argc, char **argv)
 
     if( !strcmp(task_id.c_str(),"SEARCH" ) ) {
 
-        if(searchInit) 
+        if(searchInit)
           secs_start = ros::Time::now().toSec();
         secs_fin = ros::Time::now().toSec();
         Dt = secs_fin - secs_start;

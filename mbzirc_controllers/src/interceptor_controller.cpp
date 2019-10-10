@@ -2,7 +2,7 @@
 #include <math.h>
 #include<cstdlib>
 #include <iostream>
-#include </usr/local/include/eigen3/Eigen/Core>
+#include <Eigen/Core>
 #include <std_msgs/Float64.h>
 #include <std_msgs/String.h>
 #include<algorithm>
@@ -24,7 +24,7 @@ Eigen::VectorXd     droneTwist(6);
 Eigen::VectorXd     targetLinearVel(3);
 Eigen::VectorXd     targetTimes(2);
 bool  searchInit;
-bool  chaseInit;     
+bool  chaseInit;
 std::string task_id;
 
 mavros_msgs::State current_state;
@@ -42,9 +42,9 @@ float dumb_min(float a, float b){
 void targetPosCallback( const geometry_msgs::Point::ConstPtr& target_pos ) {
   // Update the target state of the AUV
   //# TODO: change point in PointStamped
-  lastTargetPos(0)=currTargetPos(0); 
+  lastTargetPos(0)=currTargetPos(0);
   lastTargetPos(1)=currTargetPos(1);
-  lastTargetPos(2)=currTargetPos(2);  
+  lastTargetPos(2)=currTargetPos(2);
 
   currTargetPos(0) = target_pos->x;
   currTargetPos(1) = target_pos->y;
@@ -85,7 +85,7 @@ void TaskIDCallback( const std_msgs::String::ConstPtr& task )  {
 
 int main(int argc, char **argv)
 {
-  
+
   std::cout<< "immalive\n" ;//debug
   ros::init(argc, argv, "interceptor_controller");
 
@@ -111,18 +111,18 @@ int main(int argc, char **argv)
   currDronePos << 0,0,0;
   targetTimes << 0,0;
   task_id = "IDLE";
-  
+
   double          secs_start;
   double          secs_fin;
   double          Dt = 0;
-  
+
   while ( ros::ok() )
   {
-    std::cout<< "ros is still spinning;task type:" ;//debug
-    std::cout<< task_id.c_str()<<std::endl ;//debug
+    // std::cout<< "ros is still spinning;task type:" ;//debug
+    // std::cout<< task_id.c_str()<<std::endl ;//debug
     if( !strcmp(task_id.c_str(),"SEARCH" ) ) {
 
-        if(searchInit) 
+        if(searchInit)
           secs_start = ros::Time::now().toSec();
         secs_fin = ros::Time::now().toSec();
         Dt = secs_fin - secs_start;
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
     } //end of search state if
 
     if( !strcmp(task_id.c_str(),"CHASE" ) ) {
-      
+
       for(int pippo=0; pippo<3; pippo++){
         targetLinearVel(pippo)=(currTargetPos(pippo)-lastTargetPos(pippo))/
                                 (targetTimes(0)-targetTimes(1));
@@ -155,8 +155,8 @@ int main(int argc, char **argv)
       aux=currTargetPos-currDronePos; //vector from drone to TGT
       float dist=aux.norm();
       float vel=dumb_min(VEL_CAP,K*dist);
-      aux=currTargetPos+ targetLinearVel*(vel/dist); //predicted position of the TGT
-      aux=aux-currDronePos; //vector connecting from drone to the predicted position of tgt
+      // aux=currTargetPos+ targetLinearVel*(vel/dist); //predicted position of the TGT
+      // aux=aux-currDronePos; //vector connecting from drone to the predicted position of tgt
       /*
       vel=vel*aux.norm()/dist;
       dist=aux.norm();
