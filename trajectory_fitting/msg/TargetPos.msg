@@ -1,0 +1,2 @@
+geometry_msgs/PointStamped position
+float64 distance
