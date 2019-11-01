@@ -1,0 +1,14 @@
+
+
+
+
+SU mav_comm:
+    mav_comm/mav_msgs/include/mav_msgs/conversions.h aggiungere funzione di conversione
+    da RollPitchYawrateThrust in forma eigen (che nel nostro caso sarà yaw
+    anziché yawrate) a quaternione da buttare su mavros
+
+su mbzirc_nmpc/mav_nonlinear_mpc/solver_made_from_cpp/npc_solver_setup.cpp
+    cambiare equazioni del moto e input in modo da lavorare con lo yaw anziché
+    con il yawrate
+
+CAPIRE COME FUNZIONO IL DISTURBANCE OBSERVER
