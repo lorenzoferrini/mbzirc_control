@@ -1,8 +1,8 @@
 #include "ros/ros.h"
 #include <iostream>
 #include <deque>
-#include <Eigen/Core>
- #include <Eigen/LU>
+#include <eigen3/Eigen/Core>
+ #include <eigen3/Eigen/LU>
 #include "trajectory_fitting/TargetPos.h"
 #include "trajectory_fitting/Coefficients.h"
 
