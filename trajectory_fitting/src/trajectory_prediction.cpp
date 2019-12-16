@@ -2,7 +2,7 @@
 #include <iostream>
 #include <deque>
 #include <Eigen/Core>
- #include <Eigen/LU>
+#include <Eigen/LU>
 #include "trajectory_fitting/TargetPos.h"
 #include "trajectory_fitting/Coefficients.h"
 

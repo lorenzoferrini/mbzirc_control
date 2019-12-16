@@ -17,6 +17,7 @@ rospy
    FILES
    PIDparam.msg
    triplePIDparam.msg
+   directionalPIDparam.msg
  )
 
  generate_messages(
@@ -36,6 +37,10 @@ include_directories(
 add_executable(basic_PID src/basic_PID.cpp)
 add_dependencies(basic_PID ${catkin_EXPORTED_TARGETS})
 target_link_libraries(basic_PID ${catkin_LIBRARIES})
+
+add_executable(directional_PID src/directional_PID.cpp)
+add_dependencies(directional_PID ${catkin_EXPORTED_TARGETS})
+target_link_libraries(directional_PID ${catkin_LIBRARIES})
 
 add_executable(interceptor src/interceptor_controller.cpp)
 add_dependencies(interceptor ${catkin_EXPORTED_TARGETS})
