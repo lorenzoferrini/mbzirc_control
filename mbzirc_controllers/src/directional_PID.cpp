@@ -128,8 +128,11 @@ DirectionalPID::DirectionalPID() {
 
 void DirectionalPID::TgtPosCallback( const geometry_msgs::Point::ConstPtr& target_pos)  {
 
-  targetPos(0) = target_pos->x;
-  targetPos(1) = target_pos->y;
+
+// TODO fix reference system between gazebo and SITL
+
+  targetPos(0) = -target_pos->y;
+  targetPos(1) = target_pos->x;
   targetPos(2) = target_pos->z;
 
   //DA RIMUOVERE CON LA CV
