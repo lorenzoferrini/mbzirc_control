@@ -3,19 +3,22 @@
 #include <deque>
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/LU>
-#include "trajectory_fitting/TargetPos.h"
+#include "geometry_msgs/PointStamped.h"
 #include "trajectory_fitting/Coefficients.h"
+#include <nav_msgs/Odometry.h>
 
 
 class TrajectoryFitting     {
 public:
     TrajectoryFitting();
-    void callback(const trajectory_fitting::TargetPos::ConstPtr& msg);
+    void callback(const geometry_msgs::PointStamped::ConstPtr& msg);
+    void OdomCallback(const nav_msgs::Odometry::ConstPtr& odometry);
 
 private:
     ros::NodeHandle node = ros::NodeHandle("~");
     ros::Publisher coeff_pub;
     ros::Subscriber sub;
+    ros::Subscriber odom_sub;
 
     int grade=4;    // grade of the polynomial fitting
     int window=25;  // number of sample used in the least suqare trajectory fitting
@@ -23,12 +26,15 @@ private:
     int counter=0;
     double offset;
     double t_off;
+    double distance;
     std::deque<double> x_v, y_v, z_v, d_v, t_v;
     Eigen::VectorXd x;
     Eigen::VectorXd y;
     Eigen::VectorXd z;
     Eigen::VectorXd d;
     Eigen::VectorXd t;
+    Eigen::VectorXd dronePos;
+    Eigen::VectorXd drone_target;
     Eigen::VectorXd coeff_x;
     Eigen::VectorXd coeff_y;
     Eigen::VectorXd coeff_z;
@@ -60,6 +66,8 @@ TrajectoryFitting::TrajectoryFitting() {
     z = Eigen::VectorXd(window);
     d = Eigen::VectorXd(window);
     t = Eigen::VectorXd(window);
+    dronePos = Eigen::VectorXd(3);
+    drone_target = Eigen::VectorXd(3);
     coeff_x = Eigen::VectorXd(grade);
     coeff_y = Eigen::VectorXd(grade);
     coeff_z = Eigen::VectorXd(grade);
@@ -67,20 +75,47 @@ TrajectoryFitting::TrajectoryFitting() {
     W = Eigen::MatrixXd(window,window);
     A = Eigen::MatrixXd(window,grade);
 
+    dronePos << 0,0,0;
+
+
     offset = ros::Time::now().toSec();
-    sub = node.subscribe("/trajectory_fitting/target_pos", 25, &TrajectoryFitting::callback, this);
+    sub = node.subscribe("/target_pos", 1, &TrajectoryFitting::callback, this);
+    odom_sub = node.subscribe("/mavros/local_position/odom", 1, &TrajectoryFitting::OdomCallback, this);
     coeff_pub = node.advertise<trajectory_fitting::Coefficients>("/trajectory_fitting/coefficients", 1);
 }
 
-void TrajectoryFitting::callback(const trajectory_fitting::TargetPos::ConstPtr& msg)
+
+void TrajectoryFitting::OdomCallback(const nav_msgs::Odometry::ConstPtr& odometry){
+
+    dronePos(0) = odometry->pose.pose.position.x;
+    dronePos(1) = odometry->pose.pose.position.y;
+    dronePos(2) = odometry->pose.pose.position.z;
+
+}
+
+void TrajectoryFitting::callback(const geometry_msgs::PointStamped::ConstPtr& msg)
 {
-    t_off = msg->position.header.stamp.toSec() - offset;
+    t_off = msg->header.stamp.toSec() - offset;
     // insert last sample at the beginning of the vector
-    x_v.push_front(msg->position.point.x);
-    y_v.push_front(msg->position.point.y);
-    z_v.push_front(msg->position.point.z);
+    // std::cout << "Entered the callback"<< std::endl;
+    // TODO fix reference system between gazebo and SITL
+
+    x_v.push_front(- msg->point.y);
+    y_v.push_front(msg->point.x);
+    z_v.push_front(msg->point.z);
     t_v.push_front(t_off);
-    d_v.push_front(msg->distance);
+
+    // std::cout << "assigned target pos"<< std::endl;
+
+    drone_target(0) = -y_v[1] - dronePos(0);
+    drone_target(1) = x_v[1] - dronePos(1);
+    drone_target(2) = z_v[1] - dronePos(2);
+    distance = drone_target.norm();
+
+    // std::cout << "distance = " << distance << std::endl;
+    // std::cout << "drone_target = " << std::endl << drone_target.transpose() << std::endl;
+
+    d_v.push_front(distance);
 
     // std::cout << "Entered the callback" << " " <<d_v.size() << "/25" << std::endl;
     if(x_v.size() >= window) { // with less than #window samples risk to overfit
@@ -100,10 +135,10 @@ void TrajectoryFitting::callback(const trajectory_fitting::TargetPos::ConstPtr& 
             }
         }
         else {
-            offset =  ros::Time::now().toSec()-0.1;
+            offset =  ros::Time::now().toNSec()*pow(10,-9)-0.1025;
             double m = t_v[1];
                 for(int i=0 ; i<window ; i++ )  {
-                    t_v[i] = t_v[i] - m;
+                    t_v[i] = t_v[i] - m ;
                     x(i) = x_v[i];
                     y(i) = y_v[i];
                     z(i) = z_v[i];
@@ -155,7 +190,14 @@ int main(int argc, char **argv)
     TrajectoryFitting trajectory_fitting;
 
     // Enter a loop, pumping callbacks
-    ros::spin();
+    // ros::spin();
+    ros::Rate loop_rate(10);
+
+    while ( ros::ok() )
+    {
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
 
     ROS_INFO("Closing...");
     return 0;

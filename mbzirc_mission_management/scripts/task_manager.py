@@ -345,7 +345,6 @@ def main():
 
     #sis = smach_ros.IntrospectionServer('smach_server', sm, '/SM_ROOT')
     #sis.start()
-    print("wowowowowo")
     sm.execute()
     rospy.spin()
     #sis.stop()
