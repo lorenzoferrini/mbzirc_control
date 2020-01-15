@@ -11,13 +11,5 @@
        </node>
        <node name = "rviz" pkg = "rviz" type = "rviz" output = "screen"/>
        <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0 0 0 0 1 map my_frame 10"/>
-       <include file="$(find gazebo_ros)/launch/empty_world.launch">
-         <arg name="world_name" value="$(find mbzirc_gazebo)/gazebo_worlds/full.world"/>
-         <arg name="paused" value="false"/>
-         <arg name="verbose" value="true" />
-         <!-- more default parameters can be changed here -->
-
-       </include>
-
 
 </launch>
