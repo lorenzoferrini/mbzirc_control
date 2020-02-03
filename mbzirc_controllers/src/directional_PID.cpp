@@ -6,7 +6,7 @@
 #include <eigen3/Eigen/Geometry>
 #include <std_msgs/Float64.h>
 #include <std_msgs/String.h>
-#include "geometry_msgs/Point.h"
+#include "geometry_msgs/PointStamped.h"
 #include "mbzirc_controller/triplePIDparam.h"
 #include "mbzirc_controller/directionalPIDparam.h"
 #include <geometry_msgs/TwistStamped.h>
@@ -18,7 +18,7 @@
 class DirectionalPID    {
 public:
     DirectionalPID();
-    void TgtPosCallback( const geometry_msgs::Point::ConstPtr& target_pos);
+    void TgtPosCallback( const geometry_msgs::PointStamped::ConstPtr& target_pos);
     void PIDparamSetCallback( const mbzirc_controller::directionalPIDparam::ConstPtr& K_PID );
     void OdomCallback(const nav_msgs::Odometry::ConstPtr& odometry);
     void TaskIDCallback( const std_msgs::String::ConstPtr& task );
@@ -110,7 +110,7 @@ DirectionalPID::DirectionalPID() {
   yAxis = Eigen::VectorXd(3);
   Dt = 0;
 
-  windupMax << 0.1, 0.1;
+  windupMax << 5, 5;
 
   ////          DA AGGIUSTARE!!!         ////
 
@@ -126,14 +126,14 @@ DirectionalPID::DirectionalPID() {
 }
 
 
-void DirectionalPID::TgtPosCallback( const geometry_msgs::Point::ConstPtr& target_pos)  {
+void DirectionalPID::TgtPosCallback( const geometry_msgs::PointStamped::ConstPtr& target_pos)  {
 
 
 // TODO fix reference system between gazebo and SITL
 
-  targetPos(0) = -target_pos->y;
-  targetPos(1) = target_pos->x;
-  targetPos(2) = target_pos->z;
+  targetPos(0) = -target_pos->point.y;
+  targetPos(1) = target_pos->point.x;
+  targetPos(2) = target_pos->point.z;
 
   //DA RIMUOVERE CON LA CV
 
@@ -275,11 +275,14 @@ void DirectionalPID::SpeedControl() {
       yAxis = R * Eigen::Vector3d{0, 1, 0};
 
       error(0) = atan2(targetPos.dot(yAxis), targetPos.dot(xAxis));
-      error(1) = targetPos.norm();
+      error(1) = targetPos.norm()-0.6;
+
 
       // Compute errors, errors derivative and integral
       errorD   = (error - errorOld)/(dt)*derInit;
       errorI   = errorI + error*dt;
+      if(error(1)>4) errorI << 0,0;
+      // || error(1)<1
       errorI   = antiWindup(errorI, windupMax);
       errorOld = error;
       derInit  = 1;
