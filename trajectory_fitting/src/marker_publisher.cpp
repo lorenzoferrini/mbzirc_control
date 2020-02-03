@@ -24,8 +24,6 @@ void CoefficientsCallback(const trajectory_fitting::Coefficients::ConstPtr& msg)
 
     line_strip.type = visualization_msgs::Marker::LINE_STRIP;
 
-
-
     // LINE_STRIP/LINE_LIST markers use only the x component of scale, for the line width
     line_strip.scale.x = 0.1;
 
@@ -83,14 +81,15 @@ void TargetPosCallback(const trajectory_fitting::TargetPos::ConstPtr& msg) {
 
 
     // POINTS markers use x and y scale for width/height respectively
-    points.scale.x = 0.2;
-    points.scale.y = 0.2;
+    points.scale.x = 0.5;
+    points.scale.y = 0.5;
 
     // Points are green
     points.color.r = 1.0;
     points.color.a = 1.0;
 
-    if( points.points.size() < 330 ) points.points.push_back(q);
+//    if( points.points.size() < 500 ) 
+    points.points.push_back(q);
 
     marker_pub.publish(points);
 }
@@ -107,9 +106,9 @@ int main( int argc, char** argv )
       ROS_INFO("Can't find polynomial grade");
   }
 
-  marker_pub = n.advertise<visualization_msgs::Marker>("/visualization_marker", 10);
+  marker_pub = n.advertise<visualization_msgs::Marker>("/visualization_marker", 100);
   ros::Subscriber coeff_sub = n.subscribe("/trajectory_fitting/coefficients", 25, CoefficientsCallback);
-  ros::Subscriber target_sub = n.subscribe("/trajectory_fitting/target_pos", 25, TargetPosCallback);
+  ros::Subscriber target_sub = n.subscribe("/trajectory_fitting/target_pos2", 25, TargetPosCallback);
 
   ros::spin();
 

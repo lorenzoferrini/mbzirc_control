@@ -11,7 +11,9 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <mavros_msgs/State.h>
+#include <mavros_msgs/PositionTarget.h>
 #include <nav_msgs/Odometry.h>
+// #include <trajectory_fitting/TargetPos.h>
 
 
 class DirectionalPID    {
@@ -27,10 +29,9 @@ public:
     void Timeupdate();
 
 private:
-
     ros::NodeHandle n = ros::NodeHandle("~");
     ros::Publisher commandVel_pub;
-    ros::Publisher commandPos_pub;
+    // ros::Publisher commandPos_pub;
     ros::Publisher PID_pub;
     ros::Subscriber subtaskSub;
     ros::Subscriber targetPosSub;
@@ -55,10 +56,9 @@ private:
     int                 wpCounter;
     std::string task_id;
     mavros_msgs::State current_state;
-
-    geometry_msgs::TwistStamped             velRef;
+    mavros_msgs::PositionTarget             velRef;
     geometry_msgs::PoseStamped              posRef;
-    mbzirc_controller::directionalPIDparam  PIDparam;
+    mbzirc_controller::directionalPIDparam  PIDparam;       
     std::vector<double>                     windupMaxv;
 
 
@@ -80,13 +80,13 @@ DirectionalPID::DirectionalPID() {
 
 
   // CREATE ROS PUBLISH OBJECTS
-  commandVel_pub = n.advertise<geometry_msgs::TwistStamped>("/mavros/setpoint_velocity/cmd_vel", 1);
-  commandPos_pub = n.advertise<geometry_msgs::PoseStamped>("/mavros/setpoint_position/local", 1);
+  commandVel_pub = n.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local2", 1);
+  // commandPos_pub = n.advertise<geometry_msgs::PoseStamped>("/mavros/setpoint_position/local2", 1);
   PID_pub = n.advertise<mbzirc_controller::directionalPIDparam>("PID_param", 1);
 
   // SUBSCRIBE TO TOPICS
   subtaskSub  = n.subscribe("PIDparamSet", 1, &DirectionalPID::PIDparamSetCallback, this);
-  targetPosSub = n.subscribe("/target_pos",1, &DirectionalPID::TgtPosCallback, this);
+  targetPosSub = n.subscribe("/trajectory_fitting/target_pos",1, &DirectionalPID::TgtPosCallback, this);
   state_sub = n.subscribe("/mavros/state", 1, &DirectionalPID::stateCallback, this);
   taskID_sub = n.subscribe("/smach/task_id", 1, &DirectionalPID::TaskIDCallback, this);
   odom_sub = n.subscribe("/mavros/local_position/odom", 1, &DirectionalPID::OdomCallback, this);
@@ -108,15 +108,10 @@ DirectionalPID::DirectionalPID() {
   xAxis = Eigen::VectorXd(3);
   yAxis = Eigen::VectorXd(3);
   Dt = 0;
+  velRef.coordinate_frame = 8;
+  velRef.type_mask = 1479;
 
   windupMax << 5, 5;
-
-    Kp(1,1) = 0.4;
-    Kd(1,1) = 0.4;
-    Ki(1,1) = 0.05;
-    Kp(0,0) = 1;
-    Kd(0,0) = 1;
-    Ki(0,0) = 0.01;
 
   ////          DA AGGIUSTARE!!!         ////
 
@@ -124,10 +119,16 @@ DirectionalPID::DirectionalPID() {
   searchInit = 1;
   wpCounter = 0;
 
+  dronePos << 0,0,0;
   targetPos << 0,0,0;
   errorOld << 0,0;
   errorI   << 0,0;
   task_id = "IDLE";
+
+	//setting pid params
+	Kp(0,0)=0.2;
+	Kd(1,1)=-1;
+
 
 }
 
@@ -137,19 +138,16 @@ void DirectionalPID::TgtPosCallback( const geometry_msgs::PointStamped::ConstPtr
 
 // TODO fix reference system between gazebo and SITL
 
-  targetPos(0) = -target_pos->point.y;
-  targetPos(1) = target_pos->point.x;
-  targetPos(2) = target_pos->point.z;
-
-  //DA RIMUOVERE CON LA CV
-
-  targetPos = targetPos - dronePos;
+  targetPos(0) = target_pos->point.x-0.05;
+  targetPos(1) = target_pos->point.y-0.6;
+  targetPos(2) = target_pos->point.z+0.21;
+  std::cout << "Target Position: \n" << targetPos(0) << " " << targetPos(1) << " " << targetPos(2);
 
 }
 
 
 void DirectionalPID::PIDparamSetCallback( const mbzirc_controller::directionalPIDparam::ConstPtr& K_PID )  {
-
+    ROS_INFO("Changing Parameters");
     Kp(1,1) = K_PID->surge.Kp;
     Kd(1,1) = K_PID->surge.Kd;
     Ki(1,1) = K_PID->surge.Ki;
@@ -158,7 +156,7 @@ void DirectionalPID::PIDparamSetCallback( const mbzirc_controller::directionalPI
     Ki(0,0) = K_PID->yaw.Ki;
     errorI << 0,0;   // initlize integral error to 0 every time a new param assignation
     derInit = 0;       // to avoid spikes of the first errorD
-
+    // std::cout << Kp;
 }
 
 void DirectionalPID::TaskIDCallback( const std_msgs::String::ConstPtr& task )   {
@@ -209,79 +207,19 @@ secs_fin = ros::Time::now().toSec();
 
 void DirectionalPID::SpeedControl() {
 
-  if( !strcmp(task_id.c_str(),"SEARCH" ) ) {
-
-      if(searchInit)
-      secs_start = ros::Time::now().toSec();
-      secs_fin = ros::Time::now().toSec();
-      Dt = secs_fin - secs_start;
-      //                  DA AGGIUSTARE !!!!!!!!
-      // La gestione coi tempi è un po' una porcata, in futuro meglio mettere
-      // un altro tipo di parametro magari posizionale o simile
-      if( Dt<10 )  {
-      velRef.twist.linear.x = 0;
-      velRef.twist.linear.y = 0;
-      velRef.twist.linear.z = 0;
-      velRef.twist.angular.x = 0;
-      velRef.twist.angular.y = 0;
-      velRef.twist.angular.z = 1;
-      commandVel_pub.publish(velRef);
-      }
-      else if ( Dt<13 ) {
-          // DA AGGIUSTARE !!!!!
-          //  Meglio mettere i waypoint come messaggio o parametro in modo che
-          //  siano più accessibili
-
-          velRef.twist.linear.z = 0;
-          velRef.twist.angular.x = 0;
-          velRef.twist.angular.y = 0;
-          velRef.twist.angular.z = 0;
-
-          if( wpCounter % 4 == 0) {
-          velRef.twist.linear.x = 2;
-          velRef.twist.linear.y = 0;
-          }
-          else if( wpCounter % 4 == 1) {
-          velRef.twist.linear.x = 0;
-          velRef.twist.linear.y = 2;
-          }
-
-          else if( wpCounter % 4 == 2) {
-          velRef.twist.linear.x = -2;
-          velRef.twist.linear.y = 0;
-          }
-
-          else if( wpCounter % 4 == 3) {
-          velRef.twist.linear.x = 0;
-          velRef.twist.linear.y = -2;
-          }
-
-          commandVel_pub.publish(velRef);
-      }
-      else  {
-          secs_start = ros::Time::now().toSec();
-          wpCounter++;
-
-      }
-  searchInit=0;
-  } //end of search state if
-
-  if( !strcmp(task_id.c_str(),"CHASE" ) ) {
-
-
       double dt;
       if(derInit) dt = secs_fin - secs_start;
       else dt = 0.1;
       secs_start = ros::Time::now().toSec();
 
 
-      targetPos_NORMALIZED = targetPos.normalized(); // versore drone-target
-      R = droneQuat.normalized().toRotationMatrix();
-      xAxis = R * Eigen::Vector3d{1, 0, 0};
+      targetPos_NORMALIZED = targetPos.normalized(); // versore drone-target in terna body
+      R = droneQuat.normalized().toRotationMatrix(); // matrice di rotazione da terna fissa a body
+      xAxis = R * Eigen::Vector3d{1, 0, 0};          //
       yAxis = R * Eigen::Vector3d{0, 1, 0};
-
-      error(0) = atan2(targetPos.dot(yAxis), targetPos.dot(xAxis));
-      error(1) = targetPos.norm()-0.6;
+      error(0) = - atan2(targetPos(0), targetPos(1));
+      error(1) = targetPos.norm()-1.5;
+      std::cout << "The error is:\n" << error << std::endl;
 
 
       // Compute errors, errors derivative and integral
@@ -295,18 +233,36 @@ void DirectionalPID::SpeedControl() {
 
       //MIMO PID
       vel_ref = Kp*error + Kd*errorD + Ki*errorI;
+      // vel_ref=std::max(vel_ref, 8)
+    //   std::cout << vel_ref << std::endl;
 
       //Update ros message
 
-      velRef.twist.linear.x = vel_ref(1)*targetPos_NORMALIZED(0);
-      velRef.twist.linear.y = vel_ref(1)*targetPos_NORMALIZED(1);
-      velRef.twist.linear.z = vel_ref(1)*targetPos_NORMALIZED(2);
-      velRef.twist.angular.x = 0;
-      velRef.twist.angular.y = 0;
-      velRef.twist.angular.z = vel_ref(0);
+      velRef.velocity.x = vel_ref(1)*targetPos_NORMALIZED(0);
+      velRef.velocity.y = vel_ref(1)*targetPos_NORMALIZED(1);
+      velRef.velocity.z = vel_ref(1)*targetPos_NORMALIZED(2);
+      velRef.yaw_rate = vel_ref(0);
 
-      // std::cout << "Here is the vector v:\n" << vel_ref << std::endl;
-      // std::cout << "Here is the vector error\n" << error << std::endl;
+			//command saturation: >0.1 because pixawk doesn't read; upper bound: up to now, not set
+			if(velRef.velocity.x > 0)
+					velRef.velocity.x=std::max(0.1,velRef.velocity.x);
+			else if(velRef.velocity.x < 0)
+					velRef.velocity.x=std::min(-0.1,velRef.velocity.x);
+			
+			if(velRef.velocity.y > 0)
+					velRef.velocity.y=std::max(0.1,velRef.velocity.y);
+			else if(velRef.velocity.y < 0)
+					velRef.velocity.y=std::min(-0.1,velRef.velocity.y);
+			
+			if(velRef.velocity.z > 0)
+					velRef.velocity.z=std::max(0.1,velRef.velocity.z);
+			else if(velRef.velocity.z < 0)
+					velRef.velocity.z=std::min(-0.1,velRef.velocity.z);
+		
+		
+
+      std::cout << "Here is the vector v:\n" << vel_ref << std::endl;
+    //   std::cout << "Here is the vector error\n" << error << std::endl;
 
       PIDparam.surge.Kp = Kp(1,1);
       PIDparam.surge.Kd = Kd(1,1);
@@ -315,9 +271,9 @@ void DirectionalPID::SpeedControl() {
       PIDparam.yaw.Kd = Kd(0,0);
       PIDparam.yaw.Ki = Ki(0,0);
 
-      commandVel_pub.publish(velRef);
+    
+      commandVel_pub.publish(velRef);    
 
-  }
 
   //Publish the updated data
   PID_pub.publish(PIDparam);

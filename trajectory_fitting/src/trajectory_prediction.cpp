@@ -21,7 +21,7 @@ private:
     ros::Subscriber odom_sub;
 
     int grade=4;    // grade of the polynomial fitting
-    int window=25;  // number of sample used in the least suqare trajectory fitting
+    int window=100;  // number of sample used in the least suqare trajectory fitting
                     // tuning this two params is fundamental to obtain a good prediction
     int counter=0;
     double offset;
@@ -79,6 +79,7 @@ TrajectoryFitting::TrajectoryFitting() {
 
 
     offset = ros::Time::now().toSec();
+<<<<<<< Updated upstream
     sub = node.subscribe("/target_pos", 1, &TrajectoryFitting::callback, this);
     odom_sub = node.subscribe("/mavros/local_position/odom", 1, &TrajectoryFitting::OdomCallback, this);
     coeff_pub = node.advertise<trajectory_fitting::Coefficients>("/trajectory_fitting/coefficients", 1);
@@ -96,6 +97,16 @@ void TrajectoryFitting::OdomCallback(const nav_msgs::Odometry::ConstPtr& odometr
 void TrajectoryFitting::callback(const geometry_msgs::PointStamped::ConstPtr& msg)
 {
     t_off = msg->header.stamp.toSec() - offset;
+=======
+    sub = node.subscribe("/trajectory_fitting/target_pos2", 75, &TrajectoryFitting::callback, this);
+    coeff_pub = node.advertise<trajectory_fitting::Coefficients>("/trajectory_fitting/coefficients", 1);
+}
+
+void TrajectoryFitting::callback(const trajectory_fitting::TargetPos::ConstPtr& msg)
+{   
+    ROS_INFO("all is well");
+    t_off = msg->position.header.stamp.toSec() - offset;
+>>>>>>> Stashed changes
     // insert last sample at the beginning of the vector
     // std::cout << "Entered the callback"<< std::endl;
     // TODO fix reference system between gazebo and SITL
