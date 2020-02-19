@@ -13,7 +13,6 @@
 #include <mavros_msgs/State.h>
 #include <mavros_msgs/PositionTarget.h>
 #include <nav_msgs/Odometry.h>
-// #include <trajectory_fitting/TargetPos.h>
 
 
 class DirectionalPID    {
@@ -32,6 +31,7 @@ private:
     ros::NodeHandle n = ros::NodeHandle("~");
     ros::Publisher commandVel_pub;
     // ros::Publisher commandPos_pub;
+
     ros::Publisher PID_pub;
     ros::Subscriber subtaskSub;
     ros::Subscriber targetPosSub;
@@ -56,9 +56,11 @@ private:
     int                 wpCounter;
     std::string task_id;
     mavros_msgs::State current_state;
+
+
     mavros_msgs::PositionTarget             velRef;
     geometry_msgs::PoseStamped              posRef;
-    mbzirc_controller::directionalPIDparam  PIDparam;       
+    mbzirc_controller::directionalPIDparam  PIDparam;
     std::vector<double>                     windupMaxv;
 
 
@@ -86,7 +88,7 @@ DirectionalPID::DirectionalPID() {
 
   // SUBSCRIBE TO TOPICS
   subtaskSub  = n.subscribe("PIDparamSet", 1, &DirectionalPID::PIDparamSetCallback, this);
-  targetPosSub = n.subscribe("/trajectory_fitting/target_pos",1, &DirectionalPID::TgtPosCallback, this);
+  targetPosSub = n.subscribe("/target_pos",1, &DirectionalPID::TgtPosCallback, this);
   state_sub = n.subscribe("/mavros/state", 1, &DirectionalPID::stateCallback, this);
   taskID_sub = n.subscribe("/smach/task_id", 1, &DirectionalPID::TaskIDCallback, this);
   odom_sub = n.subscribe("/mavros/local_position/odom", 1, &DirectionalPID::OdomCallback, this);
@@ -129,7 +131,6 @@ DirectionalPID::DirectionalPID() {
 	Kp(0,0)=0.2;
 	Kd(1,1)=-1;
 
-
 }
 
 
@@ -139,9 +140,10 @@ void DirectionalPID::TgtPosCallback( const geometry_msgs::PointStamped::ConstPtr
 // TODO fix reference system between gazebo and SITL
 
   targetPos(0) = target_pos->point.x-0.05;
-  targetPos(1) = target_pos->point.y-0.6;
+  targetPos(1) = target_pos->point.y-0.6;https://www.google.com/search?client=ubuntu&hs=CBF&channel=fs&sxsrf=ACYBGNTZoyHWrkTZY181D77VHoluYugLyg%3A1581669683948&ei=M11GXpO7OaKBi-gPpMmSsAY&q=cv2+has+no+attribute+xfeatures2d&oq=cv2+has+no+attri&gs_l=psy-ab.3.4.0i203l10.9549337.9553300..9556018...0.5..0.93.1331.16......0....1..gws-wiz.......0i71j0i131j0i67j0j35i39j35i39i19.mzIvflDjuqo
   targetPos(2) = target_pos->point.z+0.21;
   std::cout << "Target Position: \n" << targetPos(0) << " " << targetPos(1) << " " << targetPos(2);
+
 
 }
 
@@ -156,7 +158,7 @@ void DirectionalPID::PIDparamSetCallback( const mbzirc_controller::directionalPI
     Ki(0,0) = K_PID->yaw.Ki;
     errorI << 0,0;   // initlize integral error to 0 every time a new param assignation
     derInit = 0;       // to avoid spikes of the first errorD
-    // std::cout << Kp;
+
 }
 
 void DirectionalPID::TaskIDCallback( const std_msgs::String::ConstPtr& task )   {
@@ -219,7 +221,7 @@ void DirectionalPID::SpeedControl() {
       yAxis = R * Eigen::Vector3d{0, 1, 0};
       error(0) = - atan2(targetPos(0), targetPos(1));
       error(1) = targetPos.norm()-1.5;
-      std::cout << "The error is:\n" << error << std::endl;
+      std::cout << "The error is:\n" << error << std::endl;rgetPos.norm()-0.6;
 
 
       // Compute errors, errors derivative and integral
@@ -233,8 +235,6 @@ void DirectionalPID::SpeedControl() {
 
       //MIMO PID
       vel_ref = Kp*error + Kd*errorD + Ki*errorI;
-      // vel_ref=std::max(vel_ref, 8)
-    //   std::cout << vel_ref << std::endl;
 
       //Update ros message
 
@@ -264,6 +264,7 @@ void DirectionalPID::SpeedControl() {
       std::cout << "Here is the vector v:\n" << vel_ref << std::endl;
     //   std::cout << "Here is the vector error\n" << error << std::endl;
 
+
       PIDparam.surge.Kp = Kp(1,1);
       PIDparam.surge.Kd = Kd(1,1);
       PIDparam.surge.Ki = Ki(1,1);
@@ -271,8 +272,7 @@ void DirectionalPID::SpeedControl() {
       PIDparam.yaw.Kd = Kd(0,0);
       PIDparam.yaw.Ki = Ki(0,0);
 
-    
-      commandVel_pub.publish(velRef);    
+      commandVel_pub.publish(velRef);
 
 
   //Publish the updated data
