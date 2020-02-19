@@ -219,7 +219,7 @@ void DirectionalPID::SpeedControl() {
       yAxis = R * Eigen::Vector3d{0, 1, 0};
       error(0) = - atan2(targetPos(0), targetPos(1));
       error(1) = targetPos.norm()-1.5;
-      std::cout << "The error is:\n" << error << std::endl;rgetPos.norm()-0.6;
+      std::cout << "The error is:\n" << error << std::endl;
 
 
       // Compute errors, errors derivative and integral
