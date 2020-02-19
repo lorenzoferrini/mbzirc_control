@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import math
-
 import rospy
 import smach
 import smach_ros
@@ -19,7 +18,6 @@ from mavros_msgs.srv import SetMode
 from nav_msgs.msg import Odometry
 from mbzirc_mission_management.msg import Task
 from time import sleep
-
 
 sm = smach.StateMachine(outcomes=['DONE'])
 mavros_state = State()
@@ -135,41 +133,7 @@ class ChaseRQ(smach.State):
         task_id_pub.publish(task_id)
         return 'chase_requested'
 
-# class Chase(smach.State):
-#     def __init__(self):
-#         smach.State.__init__(self, outcomes=['target_locked','target_lost'])
-#
-#         self.subscriber = rospy.Subscriber("targetPos", Point, self.ChaseCallback)
-#         self.subscriber = rospy.Subscriber("/target_found", Bool, self.LostCallback)
-#         self.mutex = threading.Lock() # non so se serva sta roba
-#         self.target_locked = False
-#         self.target_lost = False
-#         self.distance = 100
-#
-#     def ChaseCallback(self, data):
-#         self.mutex.acquire()
-#         self.distance = data.z
-#         if self.distance < 2 :
-#             self.target_locked = True
-#             print("The target distance is: %6.2f" % (self.distance))
-#         self.mutex.release()
-#
-#     def LostCallback(self, data):
-#         self.mutex.acquire()
-#         if not data.data:
-#             self.target_lost = True
-#             print("The target distance is: %6.2f" % (self.distance))
-#         self.mutex.release()
-#
-#     def execute(self, userdata):
-#         while 1:
-#              self.mutex.acquire()
-#              if self.target_lost:
-#                 return 'target_lost'
-#              if self.target_locked:
-#                return 'target_locked'
-#              self.mutex.release()
-#              time.sleep(.01)
+
 class Abort(smach.State):
     def __init__(self):
         smach.State.__init__(self,

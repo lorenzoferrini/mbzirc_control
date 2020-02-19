@@ -7,7 +7,6 @@
 #include <std_msgs/Float64.h>
 #include <std_msgs/String.h>
 #include "geometry_msgs/PointStamped.h"
-#include "mbzirc_controller/triplePIDparam.h"
 #include "mbzirc_controller/directionalPIDparam.h"
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -111,6 +110,13 @@ DirectionalPID::DirectionalPID() {
   Dt = 0;
 
   windupMax << 5, 5;
+
+    Kp(1,1) = 0.4;
+    Kd(1,1) = 0.4;
+    Ki(1,1) = 0.05;
+    Kp(0,0) = 1;
+    Kd(0,0) = 1;
+    Ki(0,0) = 0.01;
 
   ////          DA AGGIUSTARE!!!         ////
 
@@ -222,7 +228,7 @@ void DirectionalPID::SpeedControl() {
       commandVel_pub.publish(velRef);
       }
       else if ( Dt<13 ) {
-          //              DA AGGIUSTARE !!!!!
+          // DA AGGIUSTARE !!!!!
           //  Meglio mettere i waypoint come messaggio o parametro in modo che
           //  siano più accessibili
 

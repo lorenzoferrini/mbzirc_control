@@ -1,0 +1,8 @@
+
+<launch>
+  <node pkg="mbzirc_controller" name="CV_directional_PID" type="CV_directional_PID" output="screen" />
+  <node pkg="distance_finder" name="tgt_pos_publisher" type="target_position_publisher.py" output="screen" />
+
+	<include file="$(find mbzirc_detection_launcher)/start_all.launch">
+	</include>
+</launch>

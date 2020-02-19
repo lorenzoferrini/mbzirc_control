@@ -1,5 +1,5 @@
 <launch>
-  <node pkg="mbzirc_controller" name="PID_controller" type="directional_PID" output="screen" />
-  <node pkg="mbzirc_mission_management" name="state_machine" type="task_manager.py" output="screen" />
-  <node name="fakeTGTfound" pkg="mbzirc_mission_management" type="fakeTGTfound" output="screen" />
+  <node pkg="mbzirc_controller" name="PID_controller" type="CV_directional_PID" output="screen" />
+  <!-- <node pkg="mbzirc_mission_management" name="state_machine" type="task_manager.py" output="screen" /> -->
+  <!-- <node name="fakeTGTfound" pkg="mbzirc_mission_management" type="fakeTGTfound" output="screen" /> -->
 </launch>

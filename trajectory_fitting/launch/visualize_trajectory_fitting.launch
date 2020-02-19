@@ -1,7 +1,7 @@
 <launch>
-         <arg name = "window_dimension" default="25"/>
+         <arg name = "window_dimension" default="50"/>
          <arg name = "polynomial_grade" default="6"/>
-         <arg name = "forward_projection" default="12"/>
+         <arg name = "forward_projection" default="8"/>
          <node name = "trajectory_fitter" pkg = "trajectory_fitting" type = "trajectory_prediction" output = "screen">
              <param name = "window_dimension" value = "$(arg window_dimension)"/>
              <param name = "polynomial_grade" value = "$(arg polynomial_grade)"/>
@@ -9,8 +9,8 @@
         <node name = "marker_publisher" pkg = "trajectory_fitting" type = "marker_publisher" output = "screen">
             <param name = "forward_projection" value = "$(arg forward_projection)"/>
        </node>
-       <node name = "fake_traj_generator" pkg = "trajectory_fitting" type = "fake_traj_generator" output = "screen"/>
-       <node name = "rviz" pkg = "rviz" type = "rviz" output = "screen"/>
+       <!-- <node name = "fake_traj_generator" pkg = "trajectory_fitting" type = "fake_traj_generator" output = "screen"/> -->
+       <node name = "rviz" pkg = "rviz" type = "rviz" output = "screen"  args="-d $(find trajectory_fitting)/config/trajectory.rviz"/>
        <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0 0 0 0 1 map my_frame 10"/>
 
 

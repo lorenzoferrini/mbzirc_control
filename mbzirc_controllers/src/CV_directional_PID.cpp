@@ -7,7 +7,6 @@
 #include <std_msgs/Float64.h>
 #include <std_msgs/String.h>
 #include "geometry_msgs/PointStamped.h"
-#include "mbzirc_controller/triplePIDparam.h"
 #include "mbzirc_controller/directionalPIDparam.h"
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -29,10 +28,10 @@ public:
     void Timeupdate();
 
 private:
-
     ros::NodeHandle n = ros::NodeHandle("~");
     ros::Publisher commandVel_pub;
-    ros::Publisher commandPos_pub;
+    // ros::Publisher commandPos_pub;
+
     ros::Publisher PID_pub;
     ros::Subscriber subtaskSub;
     ros::Subscriber targetPosSub;
@@ -58,6 +57,7 @@ private:
     std::string task_id;
     mavros_msgs::State current_state;
 
+
     mavros_msgs::PositionTarget             velRef;
     geometry_msgs::PoseStamped              posRef;
     mbzirc_controller::directionalPIDparam  PIDparam;
@@ -82,8 +82,8 @@ DirectionalPID::DirectionalPID() {
 
 
   // CREATE ROS PUBLISH OBJECTS
-  commandVel_pub = n.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local", 1);
-  commandPos_pub = n.advertise<geometry_msgs::PoseStamped>("/mavros/setpoint_position/local", 1);
+  commandVel_pub = n.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local2", 1);
+  // commandPos_pub = n.advertise<geometry_msgs::PoseStamped>("/mavros/setpoint_position/local2", 1);
   PID_pub = n.advertise<mbzirc_controller::directionalPIDparam>("PID_param", 1);
 
   // SUBSCRIBE TO TOPICS
@@ -127,6 +127,10 @@ DirectionalPID::DirectionalPID() {
   errorI   << 0,0;
   task_id = "IDLE";
 
+	//setting pid params
+	Kp(0,0)=0.2;
+	Kd(1,1)=-1;
+
 }
 
 
@@ -135,15 +139,17 @@ void DirectionalPID::TgtPosCallback( const geometry_msgs::PointStamped::ConstPtr
 
 // TODO fix reference system between gazebo and SITL
 
-  targetPos(0) = target_pos->point.x;
-  targetPos(1) = target_pos->point.y;
-  targetPos(2) = target_pos->point.z;
+  targetPos(0) = target_pos->point.x-0.05;
+  targetPos(1) = target_pos->point.y-0.6;https://www.google.com/search?client=ubuntu&hs=CBF&channel=fs&sxsrf=ACYBGNTZoyHWrkTZY181D77VHoluYugLyg%3A1581669683948&ei=M11GXpO7OaKBi-gPpMmSsAY&q=cv2+has+no+attribute+xfeatures2d&oq=cv2+has+no+attri&gs_l=psy-ab.3.4.0i203l10.9549337.9553300..9556018...0.5..0.93.1331.16......0....1..gws-wiz.......0i71j0i131j0i67j0j35i39j35i39i19.mzIvflDjuqo
+  targetPos(2) = target_pos->point.z+0.21;
+  std::cout << "Target Position: \n" << targetPos(0) << " " << targetPos(1) << " " << targetPos(2);
+
 
 }
 
 
 void DirectionalPID::PIDparamSetCallback( const mbzirc_controller::directionalPIDparam::ConstPtr& K_PID )  {
-
+    ROS_INFO("Changing Parameters");
     Kp(1,1) = K_PID->surge.Kp;
     Kd(1,1) = K_PID->surge.Kd;
     Ki(1,1) = K_PID->surge.Ki;
@@ -203,7 +209,6 @@ secs_fin = ros::Time::now().toSec();
 
 void DirectionalPID::SpeedControl() {
 
-
       double dt;
       if(derInit) dt = secs_fin - secs_start;
       else dt = 0.1;
@@ -214,9 +219,9 @@ void DirectionalPID::SpeedControl() {
       R = droneQuat.normalized().toRotationMatrix(); // matrice di rotazione da terna fissa a body
       xAxis = R * Eigen::Vector3d{1, 0, 0};          //
       yAxis = R * Eigen::Vector3d{0, 1, 0};
-
-      error(0) = atan2(targetPos(1), targetPos(0));
-      error(1) = targetPos.norm()-0.6;
+      error(0) = - atan2(targetPos(0), targetPos(1));
+      error(1) = targetPos.norm()-1.5;
+      std::cout << "The error is:\n" << error << std::endl;rgetPos.norm()-0.6;
 
 
       // Compute errors, errors derivative and integral
@@ -238,8 +243,27 @@ void DirectionalPID::SpeedControl() {
       velRef.velocity.z = vel_ref(1)*targetPos_NORMALIZED(2);
       velRef.yaw_rate = vel_ref(0);
 
-      // std::cout << "Here is the vector v:\n" << vel_ref << std::endl;
-      // std::cout << "Here is the vector error\n" << error << std::endl;
+			//command saturation: >0.1 because pixawk doesn't read; upper bound: up to now, not set
+			if(velRef.velocity.x > 0)
+					velRef.velocity.x=std::max(0.1,velRef.velocity.x);
+			else if(velRef.velocity.x < 0)
+					velRef.velocity.x=std::min(-0.1,velRef.velocity.x);
+			
+			if(velRef.velocity.y > 0)
+					velRef.velocity.y=std::max(0.1,velRef.velocity.y);
+			else if(velRef.velocity.y < 0)
+					velRef.velocity.y=std::min(-0.1,velRef.velocity.y);
+			
+			if(velRef.velocity.z > 0)
+					velRef.velocity.z=std::max(0.1,velRef.velocity.z);
+			else if(velRef.velocity.z < 0)
+					velRef.velocity.z=std::min(-0.1,velRef.velocity.z);
+		
+		
+
+      std::cout << "Here is the vector v:\n" << vel_ref << std::endl;
+    //   std::cout << "Here is the vector error\n" << error << std::endl;
+
 
       PIDparam.surge.Kp = Kp(1,1);
       PIDparam.surge.Kd = Kd(1,1);
