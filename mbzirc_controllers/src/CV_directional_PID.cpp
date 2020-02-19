@@ -30,7 +30,6 @@ public:
 private:
     ros::NodeHandle n = ros::NodeHandle("~");
     ros::Publisher commandVel_pub;
-    // ros::Publisher commandPos_pub;
 
     ros::Publisher PID_pub;
     ros::Subscriber subtaskSub;
@@ -83,7 +82,6 @@ DirectionalPID::DirectionalPID() {
 
   // CREATE ROS PUBLISH OBJECTS
   commandVel_pub = n.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local2", 1);
-  // commandPos_pub = n.advertise<geometry_msgs::PoseStamped>("/mavros/setpoint_position/local2", 1);
   PID_pub = n.advertise<mbzirc_controller::directionalPIDparam>("PID_param", 1);
 
   // SUBSCRIBE TO TOPICS
