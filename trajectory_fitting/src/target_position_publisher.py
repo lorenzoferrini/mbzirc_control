@@ -33,7 +33,7 @@ absolute_ball_pos_in_absolute_frame=PointStamped()
 # 5) AVERAGED BALL POSITION
 # averaged_drone_to_ball_in_drone_frame
 
-# drone_to_ball_in_drone_frame_stack= collections.deque([0,0,0,0,0,0,0,0,0,0],maxlen=10)
+drone_to_ball_in_drone_frame_stack= collections.deque([0,0,0,0,0,0,0,0,0,0],maxlen=10)
 
 
 # VISION MSG TO 
@@ -50,7 +50,7 @@ def absolute_ball_in_absolute_frame(data):
     
     """ 
     input:
-    
+     
     data:  drone_pos (PoseStamped)
 
     output:
@@ -82,13 +82,14 @@ def absolute_ball_in_absolute_frame(data):
     absolute_ball_pos_in_absolute_frame.point.y=np_ball_position_in_global_frame[1]
     absolute_ball_pos_in_absolute_frame.point.z=np_ball_position_in_global_frame[2]
     
-    return absolute_ball_pos_in_absolute_frame
+    # rospy.loginfo("abs_pose")
 
 
 def from_vision_msg_to_drone_pose_in_global_frame(data):
     
     global drone_to_ball_in_drone_frame
     global averaged_drone_to_ball_in_drone_frame
+    global drone_to_ball_in_drone_frame_stack
     
     """ 
     input:
@@ -103,27 +104,32 @@ def from_vision_msg_to_drone_pose_in_global_frame(data):
 
     drone_to_ball_in_drone_frame.header.stamp = rospy.Time.now()
     drone_to_ball_in_drone_frame.point.x=data.targets_pos[0].err_x_m
-    drone_to_ball_in_drone_frame.point.y=-data.targets_pos[0].err_y_m
-    drone_to_ball_in_drone_frame.point.z=data.targets_pos[0].dist
+    drone_to_ball_in_drone_frame.point.z=-data.targets_pos[0].err_y_m
+    drone_to_ball_in_drone_frame.point.y=data.targets_pos[0].dist
     
     # drone_to_ball_in_drone_frame_stack.popleft()
     # drone_to_ball_in_drone_frame_stack.append(drone_to_ball_in_drone_frame.point.z)
+    
+    # print(drone_to_ball_in_drone_frame.point.z)
         
     # averaged_drone_to_ball_in_drone_frame=reject_outliers(drone_to_ball_in_drone_frame_stack)
     
-def abs_ball_publisher():
+    # rospy.loginfo("from_vision_to_pos")
+
+    
+def abs_ball_publisher_averaged():
     
     global averaged_drone_to_ball_in_drone_frame
-    
+    # rospy.loginfo("abs_ball_publisher")
     br = tf.TransformBroadcaster()
-    br.sendTransform((averaged_drone_to_ball_in_drone_frame.point.x, averaged_drone_to_ball_in_drone_frame.point.y, absolute_ball_pos_in_absolute_frame.point.z),tf.transformations.quaternion_from_euler(0, 0, 90),rospy.Time.now(),'/abs_ball_abs_pose',"map")
+    br.sendTransform((averaged_drone_to_ball_in_drone_frame.point.x, averaged_drone_to_ball_in_drone_frame.point.y, absolute_ball_pos_in_absolute_frame.point.z),tf.transformations.quaternion_from_euler(0, 0, 90),rospy.Time.now(),'/abs_ball_averaged',"map")
 
-# def abs_ball_publisher_averaged():
+def abs_ball_publisher():
     
-#     global averaged
-    
-#     br = tf.TransformBroadcaster()
-#     br.sendTransform((absolute_ball_pos_in_absolute_frame.point.x, absolute_ball_pos_in_absolute_frame.point.y, averaged_drone_to_ball_in_drone_frame),tf.transformations.quaternion_from_euler(0, 0, 90),rospy.Time.now(),'/abs_ball_averaged',"map")
+    global absolute_ball_pos_in_absolute_frame
+    # rospy.loginfo("averaged_ball_publisher")
+    br = tf.TransformBroadcaster()
+    br.sendTransform((absolute_ball_pos_in_absolute_frame.point.x, absolute_ball_pos_in_absolute_frame.point.y, averaged_drone_to_ball_in_drone_frame),tf.transformations.quaternion_from_euler(0, 0, 90),rospy.Time.now(),'/abs_ball',"map")
 
 
 def reject_outliers(data):
@@ -151,10 +157,11 @@ def translator():
 
     while not rospy.is_shutdown():
         try:
+            # rospy.loginfo("BOH")
             absolute_ball_pos_in_absolute_frame=absolute_ball_in_absolute_frame()
             pub_ball_absolute_pos_in_abs_frame.publish(absolute_ball_pos_in_absolute_frame)
             abs_ball_publisher()
-            # print (drone_to_ball_in_drone_frame_stack)
+            print (absolute_ball_pos_in_absolute_frame)
         except:
             pass
         rate.sleep()
