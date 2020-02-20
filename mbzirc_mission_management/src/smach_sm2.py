@@ -25,6 +25,28 @@ from position_memory_class import Position_Memory
 from ConfigParser import SafeConfigParser
 from distance_finder.msg import ObjPosVec, ObjPos
 
+def ServoParam_Set(servo_function):
+   rospy.wait_for_service('/mavros_02/param/set')
+   try:
+       Parameter_Set = rospy.ServiceProxy(mavros_name+'/param/set', mavros_msgs.srv.ParamSet)
+       servo = ParamValue()
+       servo.real = servo_function
+       Parameter_Set('SERVO9_FUNCTION', servo)
+   except rospy.ServiceException, e:
+       print "Service call failed: %s", e
+
+def CallbackLidar(data):
+    global distLidar
+    distLidar = data.data
+
+def closeGripper(number): #1850 to open, 870 to close
+    servo_Service = rospy.ServiceProxy(mavros_name +'/cmd/command', mavros_msgs.srv.CommandLong)
+    rospy.Subscriber('/gripper_lidar', Float32, CallbackLidar)
+    starttimeGripper = rospy.Time.now().secs
+    while rospy.Time.now().secs - starttimeGripper < 3 :
+        if distLidar < (12) :
+            servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, number, 0, 0, 0, 0, 0)
+
 def setGuidedMode():
    rospy.wait_for_service(mavros_name+'/set_mode')
    global isModeGuided
@@ -475,9 +497,9 @@ def reaching_cb(user_data):
     #compass_topic = rospy.Subscriber('mavros/global_position/compass_hdg', Float64, compass_callback)
     #rospy.sleep(0.5)
     if locked == 1:
-
         vel_x,vel_y,vel_z,yaw_rate=dir_pid_return()
         set_velocity_body(vel_x,vel_y,vel_z,yaw_rate)
+
     while locked == 1 and mode == 'GUIDED':
         last_pos = [err_x_pix, err_y_pix, dist]
         vel_x,vel_y,vel_z,yaw_rate=dir_pid_return()
@@ -485,19 +507,46 @@ def reaching_cb(user_data):
         (locked, err_x_pix, err_y_pix, err_x_m, err_y_m, dist, res_w ,res_h) = balloonchecker()
         last_time_locked = rospy.get_time()
 
-        if locked == 1 and abs(err_x_m) <= 0.1 and abs(err_y_m)<0.1 and abs(dist)< 1.2:
-            break
+        if distLidar<12: 
+            #CHIUSURA:1850, APERTURA: 870
+            servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, 1850, 0, 0, 0, 0, 0) #chiudi
+            rospy.loginfo('gripper chiuso causa lidar')
+            #VERIFICARE SE HO LA PALLA O NO
+            rospy.sleep(0.5)
+            if distLidar<15:balloonchecker
+                rospy.loginfo('palloncino CATTURATO')
+                return 'failed'
+            else:
+                rospy.loginfo('palloncino LOST')
+                servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, 870, 0, 0, 0, 0, 0) #apri
 
-    if mode == 'ALT_HOLD':
+
+    if mode == 'ALT_HOLD': #switched to manual mode
         Clear_Mission()
+        ServoParam_Set(58) #set servo to manual
         rospy.signal_shutdown('Quit for Alt_hold')
         os.system('rosnode kill '+ mavros_name)
         sis.stop()
-    elif locked == 0:
+    elif locked == 0: #short term recovery
+        rospy.loginfo("short term recovery")
         last_velocity = PositionTarget()
         last_velocity = dir_pid_data
         vel_cmd=last_velocity
         while rospy.Time.from_sec(last_time_locked) < 2 and mode=='GUIDED':
+            #gripper checking part
+            if distLidar<12: 
+                #CHIUSURA:1850, APERTURA: 870
+                servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, 1850, 0, 0, 0, 0, 0) #chiudi
+                rospy.loginfo('str:trovato oggetto vicino')
+                #VERIFICARE SE HO LA PALLA O NO
+                rospy.sleep(0.5)
+                if distLidar<15:balloonchecker
+                    rospy.loginfo('str:palloncino CATTURATO')
+                    return 'failed'
+                else:
+                    rospy.loginfo('str:palloncino LOST')
+                    servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, 870, 0, 0, 0, 0, 0) #apri
+            #command decayng part        
             vel_cmd.velocity.x = last_velocity.velocity.x * (2 - rospy.Time.from_sec(last_time_locked))
             vel_cmd.velocity.y = last_velocity.velocity.y * (2 - rospy.Time.from_sec(last_time_locked))
             vel_cmd.velocity.z = last_velocity.velocity.z * (2 - rospy.Time.from_sec(last_time_locked))
@@ -555,19 +604,23 @@ if __name__ == '__main__':
     mavros_name = 'mavros'
     rospy.init_node('drone_state_machine', anonymous=True)
     #rospy.wait_for_service('/mavros/param/set')
-
+    #subs
     manuale_topic = rospy.Subscriber(mavros_name+'/state', State, manuale_callback)
     balloon_topic = rospy.Subscriber('/distance_finder/target_pos', ObjPosVec, balloon_callback)
     waypoint_topic = rospy.Subscriber(mavros_name+'/mission/reached', WaypointReached, WP_reached_callback)
     compass_topic = rospy.Subscriber(mavros_name+'/global_position/compass_hdg', Float64, compass_callback)
     position_topic = rospy.Subscriber(mavros_name+'/global_position/global', NavSatFix, home_callback)
     Alt_topic = rospy.Subscriber(mavros_name+'/local_position/pose', PoseStamped, pose_callback)
-
+    setpoint_velocity_sub= rospy.Subscriber(mavros_name+'/setpoint_raw/local2',PositionTarget, dir_pid_callback)
+    #publs
     setpoint_position_pub = rospy.Publisher(mavros_name+'/setpoint_raw/global', GlobalPositionTarget, queue_size=2)
     setpoint_velocity_pub = rospy.Publisher(mavros_name+'/setpoint_raw/local', PositionTarget, queue_size=2)
-    setpoint_velocity_sub= rospy.Subscriber(mavros_name+'/setpoint_raw/local2',PositionTarget, dir_pid_callback)
     setpoint_angular_velocity_pub = rospy.Publisher(mavros_name+'/setpoint_velocity/cmd_vel', TwistStamped, queue_size=10)
     rospy.sleep(0.3)
+    #gripper
+    servo_Service = rospy.ServiceProxy(mavros_name +'/cmd/command', mavros_msgs.srv.CommandLong)
+    rospy.Subscriber('/gripper_lidar', Float32, CallbackLidar)
+
 
     # gripper_topic= rospy.Subscriber('/gripper', Bool, gripper_callback)
 
