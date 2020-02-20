@@ -285,8 +285,9 @@ void DirectionalPID::SpeedControl() {
 #define MAX_VOFFSET 1
 
 float DirectionalPID::VerticalOffset(float dist) {
-  return 0.2;
 
+  if(dist>MAXDIST_VOFFSET)
+    return MAX_VOFFSET;
   return (float)MAX_VOFFSET*dist/(float)MAXDIST_VOFFSET;
 }
 
