@@ -26,7 +26,7 @@ from ConfigParser import SafeConfigParser
 from distance_finder.msg import ObjPosVec, ObjPos
 
 def ServoParam_Set(servo_function):
-   rospy.wait_for_service('/mavros_02/param/set')
+   rospy.wait_for_service(mavros_name+'/param/set')
    try:
        Parameter_Set = rospy.ServiceProxy(mavros_name+'/param/set', mavros_msgs.srv.ParamSet)
        servo = ParamValue()
@@ -355,7 +355,7 @@ def loadMission_cb(user_data):
     rospy.loginfo('Load Mission')
     position_memory.wipe_memory()
     Clear_Mission()
-
+    ServoParam_Set(0)
     # Calibrazioni
     cmd_calibrate_pressure()
     time.sleep(2)
@@ -386,6 +386,8 @@ def takeoff_cb(user_data):
               break
     if mode == 'ALT_HOLD':
         Clear_Mission()
+        ServoParam_Set(58) #set servo to manual
+
         rospy.signal_shutdown('Quit for Alt_hold')
         os.system('rosnode kill '+ mavros_name)
         sis.stop()
@@ -473,6 +475,7 @@ def auto_cb(user_data):
         Clear_Mission()
         print 'Stop VideoGet and VideoShow'
         # rec_and_show.stop()
+        ServoParam_Set(58) #set servo to manual
         rospy.signal_shutdown('Quit for Alt_hold')
         os.system('rosnode kill '+ mavros_name)
         sis.stop()
@@ -557,7 +560,6 @@ def reaching_cb(user_data):
          return 'failed'
 
 
-
 @smach.cb_interface(input_keys=[], output_keys=[], outcomes=['finished'])
 def RTL_cb(user_data):
     rospy.loginfo('RTL')
@@ -568,6 +570,7 @@ def RTL_cb(user_data):
        continue
     if mode == 'ALT_HOLD':
         Clear_Mission()
+        ServoParam_Set(58) #set servo to manual
         rospy.signal_shutdown('Quit for Alt_hold')
         os.system('rosnode kill '+ mavros_name)
         sis.stop()
@@ -588,6 +591,8 @@ def land_cb(user_data):
     if mode == 'ALT_HOLD':
         Clear_Mission()
         rospy.signal_shutdown('Quit for Alt_hold')
+        ServoParam_Set(58) #set servo to manual
+
         os.system('rosnode kill '+ mavros_name)
         sis.stop()
     if mode == 'LAND' and alt < 1:
@@ -629,30 +634,6 @@ if __name__ == '__main__':
 
     # Dati
     sm.userdata.height = config.getfloat('GAPL','takeoff_altitude')  # quota di take-off e rtl
-    #sm.userdata.auto_vel = config.getfloat('GAPL','auto_vel')        # vel nella missione AUTO [cm/s]
-    #sm.userdata.k_action = config.getfloat('GAPL','k_action')        # control gain for speed error during action
-    #sm.userdata.vel_x_max = config.getfloat('GAPL','vel_x_max')      # max speed along x_body [m/s]
-    #sm.userdata.vel_x_min = config.getfloat('GAPL','vel_x_min')      # max speed along x_body [m/s]
-    #sm.userdata.vel_y_max = config.getfloat('GAPL','vel_y_max')      # max speed along y_body [m/s]
-    #sm.userdata.vel_y_min = config.getfloat('GAPL','vel_y_min')      # max speed along y_body [m/s]
-    #sm.userdata.v_zero = config.getfloat('GAPL','v_zero')            # experimental speed value
-    #dist_max = config.getint('GAPL','dist_max')                      # maximum distance for positive target recognition
-    #sm.userdata.dist_min = config.getfloat('GAPL','dist_min')          # minimum distance from balloon during action
-    #sm.userdata.kerr_velx = sm.userdata.vel_x_max/dist_max           # control gain for speed error along x_body [1/s]
-    #sm.userdata.kerr_vely = sm.userdata.vel_y_max/err_x_max          # control gain for speed error along y_body [1/s]
-    #sm.userdata.erry_min = config.getfloat('GAPL','erry_min')        # minimum distance between the centre of the picture and the relative position of the drone
-    #erry_max = config.getfloat('GAPL','erry_max')                    # maximum distance between the centre of the picture and the relative position of the drone
-    #Vzmax = config.getfloat('GAPL','vel_z_max')                      # max speed along z_body [m/s]
-    #sm.userdata.k_z = 1.1*Vzmax/(erry_max-sm.userdata.erry_min)          # control gain for speed error along z_body
-    #sm.userdata.yaw_rateMin = config.getfloat('GAPL','yaw_rateMin')            # Yaw Rate Min for the orienting phase
-    #sm.userdata.yaw_rateMax = config.getfloat('GAPL','yaw_rateMin')*4          # Yaw Rate Max for the orienting phase
-    #sm.userdata.alt_max = config.getfloat('GAPL','alt_max')          # max altitude [m]
-    #sm.userdata.alt_min = config.getfloat('GAPL','alt_min')          # min altitude [m]
-    #sm.userdata.Hmax85 = 0.85*config.getfloat('GAPL','alt_max')
-    #sm.userdata.Hmin115 = 1.15*config.getfloat('GAPL','alt_min')
-
-
-
 
     #  Start for Position Memory
     position_memory = Position_Memory()
