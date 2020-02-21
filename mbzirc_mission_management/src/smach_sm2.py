@@ -425,17 +425,13 @@ def auto_cb(user_data):
     setGuidedMode()
     t = time.time()
     elapsed=0
-    print("Setting time to 0")
+    rospy.loginfo('smach::starting to spin on first wp')
     while(elapsed<6):
         elapsed = time.time() - t
-        print(elapsed)
         set_velocity_body(0,0,0,1)
         (locked, err_x_pix, err_y_pix, err_x_m, err_y_m, dist, res_w ,res_h) = balloonchecker()
         if (locked==1):
             break
-            print("Second 180")
-            print("Sleeping")
-            print( "Waypoint reached")
     setAutoMode()
 
     previous_wp=CurrentWaypoint
@@ -447,30 +443,20 @@ def auto_cb(user_data):
             setGuidedMode()
             t = time.time()
             elapsed=0
-            print("Setting time to 0")
+            rospy.loginfo('smach::starting to spin on wp')
             while(elapsed<6):
                 elapsed = time.time() - t
-                print(elapsed)
                 set_velocity_body(0,0,0,1)
                 (locked, err_x_pix, err_y_pix, err_x_m, err_y_m, dist, res_w ,res_h) = balloonchecker()
                 if (locked==1):
                     break
-                print("Second 180")
-                print("Sleeping")
-                print( "Waypoint reached")
             setAutoMode()
             previous_wp=previous_wp+1
 
 
-
-            # if position_memory.check_ballon_already_reached(target_loc[0], target_loc[1], target_loc[2]):
-            #     print 'Balloon already reached'
-            #     locked = 0
-            # else:
-            #     break
-    if mode == 'ALT_HOLD':
+  if mode == 'ALT_HOLD':
         Clear_Mission()
-        print 'Stop VideoGet and VideoShow'
+        rospy.loginfo('Stop VideoGet and VideoShow')
         # rec_and_show.stop()
         ServoParam_Set(58) #set servo to manual
         rospy.signal_shutdown('Quit for Alt_hold')
@@ -486,9 +472,9 @@ def auto_cb(user_data):
 
 @smach.cb_interface(input_keys=[], output_keys=[], outcomes=['failed','searching'])
 def reaching_cb(user_data):
-    rospy.loginfo('mode GUIDED')
+    rospy.loginfo('smach::mode GUIDED')
     setGuidedMode()
-    rospy.loginfo('Balloon found')
+    rospy.loginfo('smach::Balloon found')
 
     rospy.loginfo('Mission Reaching')
     (locked, err_x_pix, err_y_pix, err_x_m, err_y_m, dist, res_w ,res_h) = balloonchecker()
@@ -520,48 +506,41 @@ def reaching_cb(user_data):
     if mode == 'ALT_HOLD': #switched to manual mode
         Clear_Mission()
         ServoParam_Set(58) #set servo to manual
-        rospy.signal_shutdown('Quit for Alt_hold')
+        rospy.signal_shutdown('smach::Quit for Alt_hold')
         os.system('rosnode kill '+ mavros_name)
         sis.stop()
         
         
     elif locked == 0: #short term recovery
         
-        # rospy.loginfo("short term recovery")
-        # last_velocity = PositionTarget()
-        # last_velocity = dir_pid_data
-        # vel_cmd=last_velocity
-        # print("rospy time is:)
-        # print (rospy.Time.from_sec(last_time_locked)
-        # while rospy.Time.from_sec(last_time_locked) < 2 and mode=='GUIDED':
-        #     # gripper checking part
-        #     if distLidar<12: 
-        #         #CHIUSURA:1850, APERTURA: 870
-        #         servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, 1850, 0, 0, 0, 0, 0) #chiudi
-        #         rospy.loginfo('str:trovato oggetto vicino')
-        #         #VERIFICARE SE HO LA PALLA O NO
-        #         rospy.sleep(0.5)
-        #         if distLidar<15:
-        #             rospy.loginfo('str:palloncino CATTURATO')
-        #             return 'failed'
-        #         else:
-        #             rospy.loginfo('str:palloncino LOST')
-        #             servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, 870, 0, 0, 0, 0, 0) #apri
-        # # command decaying part   
-        
-         
-        # vel_cmd.velocity.x = last_velocity.velocity.x * (2 - rospy.Time.from_sec(last_time_locked))
-        # vel_cmd.velocity.y = last_velocity.velocity.y * (2 - rospy.Time.from_sec(last_time_locked))
-        # vel_cmd.velocity.z = last_velocity.velocity.z * (2 - rospy.Time.from_sec(last_time_locked))
-        # vel_cmd.yaw_rate = last_velocity.yaw_rate * (2 - rospy.Time.from_sec(last_time_locked))
-        # set_velocity_body_command(vel_cmd)
-        
-        
-        
+        rospy.loginfo("smach::short term recovery")
+        last_velocity = PositionTarget()
+        last_velocity = dir_pid_data
+        vel_cmd=last_velocity
+        print("rospy time is:)
+        print (rospy.Time.from_sec(last_time_locked)
+        while rospy.Time.from_sec(last_time_locked) < 2 and mode == 'GUIDED':
+            # # gripper checking part
+            # if distLidar<12: 
+            #     #CHIUSURA:1850, APERTURA: 870
+            #     servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, 1850, 0, 0, 0, 0, 0) #chiudi
+            #     rospy.loginfo('str:trovato oggetto vicino')
+            #     #VERIFICARE SE HO LA PALLA O NO
+            #     rospy.sleep(0.5)
+            #     if distLidar<15:
+            #         rospy.loginfo('str:palloncino CATTURATO')
+            #         return 'failed'
+            #     else:
+            #         rospy.loginfo('str:palloncino LOST')
+            #         servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, 870, 0, 0, 0, 0, 0) #apri
+            # command decaying part            
+            vel_cmd.velocity.x = last_velocity.velocity.x * (2 - rospy.Time.from_sec(last_time_locked))
+            vel_cmd.velocity.y = last_velocity.velocity.y * (2 - rospy.Time.from_sec(last_time_locked))
+            vel_cmd.velocity.z = last_velocity.velocity.z * (2 - rospy.Time.from_sec(last_time_locked))
+            vel_cmd.yaw_rate = last_velocity.yaw_rate * (2 - rospy.Time.from_sec(last_time_locked))
+            set_velocity_body_command(vel_cmd)
         
         return 'searching'
-    else:
-        return 'failed'
 
 
 @smach.cb_interface(input_keys=[], output_keys=[], outcomes=['finished'])
