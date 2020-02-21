@@ -628,7 +628,7 @@ if __name__ == '__main__':
     rospy.sleep(0.3)
     #gripper
     servo_Service = rospy.ServiceProxy(mavros_name +'/cmd/command', mavros_msgs.srv.CommandLong)
-    rospy.Subscriber('/gripper_lidar', Float32, CallbackLidar)
+    #rospy.Subscriber('/gripper_lidar', Float32, CallbackLidar)
 
 
     # gripper_topic= rospy.Subscriber('/gripper', Bool, gripper_callback)
