@@ -246,20 +246,20 @@ void DirectionalPID::SpeedControl() {
       velRef.yaw_rate = vel_ref(0);
 
 			//command saturation: >0.1 because pixawk doesn't read; upper bound: up to now, not set
-			if(velRef.velocity.x > 0)
-					velRef.velocity.x=std::max(0.1,velRef.velocity.x);
-			else if(velRef.velocity.x < 0)
-					velRef.velocity.x=std::min(-0.1,velRef.velocity.x);
+			// if(velRef.velocity.x > 0)
+			// 		velRef.velocity.x=std::max(0.1,velRef.velocity.x);
+			// else if(velRef.velocity.x < 0)
+			// 		velRef.velocity.x=std::min(-0.1,velRef.velocity.x);
 			
-			if(velRef.velocity.y > 0)
-					velRef.velocity.y=std::max(0.1,velRef.velocity.y);
-			else if(velRef.velocity.y < 0)
-					velRef.velocity.y=std::min(-0.1,velRef.velocity.y);
+			// if(velRef.velocity.y > 0)
+			// 		velRef.velocity.y=std::max(0.1,velRef.velocity.y);
+			// else if(velRef.velocity.y < 0)
+			// 		velRef.velocity.y=std::min(-0.1,velRef.velocity.y);
 			
-			if(velRef.velocity.z > 0)
-					velRef.velocity.z=std::max(0.1,velRef.velocity.z);
-			else if(velRef.velocity.z < 0)
-					velRef.velocity.z=std::min(-0.1,velRef.velocity.z);
+			// if(velRef.velocity.z > 0)
+			// 		velRef.velocity.z=std::max(0.1,velRef.velocity.z);
+			// else if(velRef.velocity.z < 0)
+			// 		velRef.velocity.z=std::min(-0.1,velRef.velocity.z);
 		
 		
 
