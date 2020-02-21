@@ -87,7 +87,7 @@ DirectionalPID::DirectionalPID() {
 
   // SUBSCRIBE TO TOPICS
   subtaskSub  = n.subscribe("PIDparamSet", 1, &DirectionalPID::PIDparamSetCallback, this);
-  targetPosSub = n.subscribe("/target_pos",1, &DirectionalPID::TgtPosCallback, this);
+  targetPosSub = n.subscribe("/trajectory_fitting/target_pos",1, &DirectionalPID::TgtPosCallback, this);
   state_sub = n.subscribe("/mavros/state", 1, &DirectionalPID::stateCallback, this);
   taskID_sub = n.subscribe("/smach/task_id", 1, &DirectionalPID::TaskIDCallback, this);
   odom_sub = n.subscribe("/mavros/local_position/odom", 1, &DirectionalPID::OdomCallback, this);
@@ -263,7 +263,7 @@ void DirectionalPID::SpeedControl() {
 		
 		
 
-      std::cout << "Here is the vector v:\n" << vel_ref << std::endl;
+      std::cout << "Here is the vector v:\n" << velRef << std::endl;
     //   std::cout << "Here is the vector error\n" << error << std::endl;
 
 
