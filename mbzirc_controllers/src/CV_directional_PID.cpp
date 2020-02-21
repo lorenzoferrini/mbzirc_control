@@ -136,14 +136,12 @@ DirectionalPID::DirectionalPID() {
 void DirectionalPID::TgtPosCallback( const geometry_msgs::PointStamped::ConstPtr& target_pos)  {
 
 
-// TODO fix reference system between gazebo and SITL
-
   targetPos(0) = target_pos->point.x-0.05; //destra
   targetPos(1) = target_pos->point.y-0.6;  //davanti
   targetPos(2) = target_pos->point.z+0.21; //alto
   //https://www.google.com/search?client=ubuntu&hs=CBF&channel=fs&sxsrf=ACYBGNTZoyHWrkTZY181D77VHoluYugLyg%3A1581669683948&ei=M11GXpO7OaKBi-gPpMmSsAY&q=cv2+has+no+attribute+xfeatures2d&oq=cv2+has+no+attri&gs_l=psy-ab.3.4.0i203l10.9549337.9553300..9556018...0.5..0.93.1331.16......0....1..gws-wiz.......0i71j0i131j0i67j0j35i39j35i39i19.mzIvflDjuqo
   
-  std::cout << "Target Position: \n" << targetPos(0) << " " << targetPos(1) << " " << targetPos(2);
+  std::cerr << "Target Position: \n" << targetPos(0) << " " << targetPos(1) << " " << targetPos(2);
 
 
 }
@@ -222,7 +220,7 @@ void DirectionalPID::SpeedControl() {
       yAxis = R * Eigen::Vector3d{0, 1, 0};
       error(0) = - atan2(targetPos(0), targetPos(1)); //errore sullo yaw: 0 è x (dx), 1 è y (avanti)
       error(1) = targetPos.norm()-1.5;   //errore sulla distanza; #TODO: TOGLIERE 1.5
-      std::cout << "The error is:\n" << error << std::endl;
+      std::cerr << "The error is:\n" << error << std::endl;
 
 
       // Compute errors, errors derivative and integral
@@ -263,9 +261,7 @@ void DirectionalPID::SpeedControl() {
 		
 		
 
-      std::cout << "Here is the vector v:\n" << vel_ref << std::endl;
-    //   std::cout << "Here is the vector error\n" << error << std::endl;
-
+      std::cerr << "Here is the vector v:\n" << vel_ref << std::endl;
 
       PIDparam.surge.Kp = Kp(1,1);
       PIDparam.surge.Kd = Kd(1,1);
