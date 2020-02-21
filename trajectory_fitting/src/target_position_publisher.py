@@ -114,7 +114,7 @@ def from_vision_msg_to_drone_pose_in_global_frame(data):
         
     # averaged_drone_to_ball_in_drone_frame=reject_outliers(drone_to_ball_in_drone_frame_stack)
     
-    # rospy.loginfo("from_vision_to_pos")
+    rospy.loginfo("from_vision_to_pos")
 
     
 def abs_ball_publisher_averaged():
@@ -142,13 +142,16 @@ def reject_outliers(data):
 
 
 def translator():
-    pub_ball_absolute_pos_in_abs_frame = rospy.Publisher('/trajectory_fitting/target_pos', PointStamped, queue_size=100)
+    pub_ball_absolute_pos_in_abs_frame = rospy.Publisher('/trajectory_fitting/target_pos2', PointStamped, queue_size=100)
+    
+    relative_ball = rospy.Publisher('/trajectory_fitting/target_pos', PointStamped, queue_size=100)
+
     
     sub_pos_from_vision=rospy.Subscriber("/distance_finder/target_pos", ObjPosVec, from_vision_msg_to_drone_pose_in_global_frame)
     
     # sub_drone_pos_from_mavros=rospy.Subscriber("/mavros/local_position/pose", PoseStamped, absolute_ball_in_absolute_frame)
     
-    sub_zed_absolute_pose=rospy.Subscriber("zed/pose", PoseStamped, absolute_ball_in_absolute_frame)
+    sub_zed_absolute_pose=rospy.Subscriber("/mavros/local_position/pose", PoseStamped, absolute_ball_in_absolute_frame)
     
     
 
@@ -158,10 +161,12 @@ def translator():
     while not rospy.is_shutdown():
         try:
             # rospy.loginfo("BOH")
-            absolute_ball_pos_in_absolute_frame=absolute_ball_in_absolute_frame()
             pub_ball_absolute_pos_in_abs_frame.publish(absolute_ball_pos_in_absolute_frame)
+            relative_ball.publish(drone_to_ball_in_drone_frame)
+            rospy.loginfo("Sto pubblicando")
+            
             abs_ball_publisher()
-            print (absolute_ball_pos_in_absolute_frame)
+            # print (absolute_ball_pos_in_absolute_frame)
         except:
             pass
         rate.sleep()
