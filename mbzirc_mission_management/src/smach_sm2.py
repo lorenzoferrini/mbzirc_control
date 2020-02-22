@@ -537,7 +537,7 @@ def reaching_cb(user_data):
         #     # vel_cmd.velocity.z = last_velocity.velocity.z * (2 - rospy.Time.from_sec(last_time_locked))
         #     # vel_cmd.yaw_rate = last_velocity.yaw_rate * (2 - rospy.Time.from_sec(last_time_locked))
         #     # set_velocity_body_command(vel_cmd)
-        # return 'searching'
+    return 'searching'
 
 
 @smach.cb_interface(input_keys=[], output_keys=[], outcomes=['finished'])
