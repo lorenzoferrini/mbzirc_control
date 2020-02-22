@@ -566,8 +566,8 @@ def land_cb(user_data):
     
     set_position = GlobalPositionTarget()
     set_position.coordinate_frame = 6  
-    set_position.latitude = my_latit
-    set_position.longitude = my_longit
+    set_position.latitude = 24,4176030  
+    set_position.longitude = 54,4359577
     set_position.altitude = 7
     set_position.type_mask = 4088 
     setpoint_position_pub.publish(set_position)
