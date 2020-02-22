@@ -480,12 +480,12 @@ def reaching_cb(user_data):
     (locked, err_x_pix, err_y_pix, err_x_m, err_y_m, dist, res_w ,res_h) = balloonchecker()
     if locked == 1:
         vel_x,vel_y,vel_z,yaw_rate=dir_pid_return()
-        set_velocity_body(vel_x,vel_y,vel_z,yaw_rate)
+        set_velocity_body(0,0,0,0)
 
     while locked == 1 and mode == 'GUIDED':
         last_pos = [err_x_pix, err_y_pix, dist]
         vel_x,vel_y,vel_z,yaw_rate=dir_pid_return()
-        set_velocity_body(vel_x,vel_y,vel_z,yaw_rate)
+        set_velocity_body(0,0,0,0)
         (locked, err_x_pix, err_y_pix, err_x_m, err_y_m, dist, res_w ,res_h) = balloonchecker()
         last_time_locked = rospy.get_time()
 
@@ -534,11 +534,11 @@ def reaching_cb(user_data):
             #         rospy.loginfo('str:palloncino LOST')
             #         servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, 870, 0, 0, 0, 0, 0) #apri
             # command decaying part            
-            vel_cmd.velocity.x = last_velocity.velocity.x * (2 - rospy.Time.from_sec(last_time_locked))
-            vel_cmd.velocity.y = last_velocity.velocity.y * (2 - rospy.Time.from_sec(last_time_locked))
-            vel_cmd.velocity.z = last_velocity.velocity.z * (2 - rospy.Time.from_sec(last_time_locked))
-            vel_cmd.yaw_rate = last_velocity.yaw_rate * (2 - rospy.Time.from_sec(last_time_locked))
-            set_velocity_body_command(vel_cmd)
+            # vel_cmd.velocity.x = last_velocity.velocity.x * (2 - rospy.Time.from_sec(last_time_locked))
+            # vel_cmd.velocity.y = last_velocity.velocity.y * (2 - rospy.Time.from_sec(last_time_locked))
+            # vel_cmd.velocity.z = last_velocity.velocity.z * (2 - rospy.Time.from_sec(last_time_locked))
+            # vel_cmd.yaw_rate = last_velocity.yaw_rate * (2 - rospy.Time.from_sec(last_time_locked))
+            # set_velocity_body_command(vel_cmd)
         
         return 'searching'
 
@@ -566,7 +566,24 @@ def RTL_cb(user_data):
 @smach.cb_interface(input_keys=[], output_keys=[], outcomes=['finished'])
 def land_cb(user_data):
     rospy.loginfo('Landing')
-    #land_topic = rospy.Subscriber('/mavros/local_position/pose', PoseStamped, pose_callback)
+    
+    set_position = GlobalPositionTarget()
+	set_position.coordinate_frame = 6  
+	set_position.latitude = my_latit
+	set_position.longitude = my_longit
+	set_position.altitude = 7
+	set_position.type_mask = 4088 
+	setpoint_position_pub.publish(set_position)
+ 
+    r = rospy.Rate(2)
+    while alt < user_data.finalAlt*0.85 and mode == 'GUIDED':
+        setpoint_position_pub.publish(set_position)
+        r.sleep()
+
+
+ 
+    # land_topic = rospy.Subscriber('/mavros/local_position/pose', PoseStamped, pose_callback)
+    
     setLandMode()
     rospy.sleep(0.5)
     while mode == 'LAND' and alt >= 1:
@@ -633,7 +650,7 @@ if __name__ == '__main__':
         smach.StateMachine.add('TAKEOFF', CBState(takeoff_cb),
                                transitions={'finished': 'MISSION_SEARCHING', 'failed':'LAND'})
         smach.StateMachine.add('MISSION_SEARCHING', CBState(auto_cb),
-                               transitions={'finished': 'RTL', 'reaching': 'MISSION_REACHING', 'failed':'RTL'})
+                               transitions={'finished': 'LAND', 'reaching': 'MISSION_REACHING', 'failed':'RTL'})
                             #    remapping={'target_dx': 'target_dx','target_dy': 'target_dy','target_loc': 'target_loc','errX_pix': 'errX_pix','errY_pix': 'errY_pix'})
         smach.StateMachine.add('MISSION_REACHING', CBState(reaching_cb),
                                transitions={'failed':'RTL', 'searching': 'MISSION_SEARCHING'})
