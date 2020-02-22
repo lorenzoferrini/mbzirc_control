@@ -566,14 +566,14 @@ def land_cb(user_data):
     
     set_position = GlobalPositionTarget()
     set_position.coordinate_frame = 6  
-    set_position.latitude = 24,4176030  
-    set_position.longitude = 54,4359577
+    set_position.latitude = 24.4176030  
+    set_position.longitude = 54.4359577
     set_position.altitude = 7
     set_position.type_mask = 4088 
     setpoint_position_pub.publish(set_position)
  
     r = rospy.Rate(2)
-    while alt < user_data.finalAlt*0.85 and mode == 'GUIDED':
+    while alt < 7*0.85 and mode == 'GUIDED':
         setpoint_position_pub.publish(set_position)
         r.sleep()
 
