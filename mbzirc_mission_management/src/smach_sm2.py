@@ -565,7 +565,7 @@ def land_cb(user_data):
     rospy.loginfo('Landing')
     
     set_position = GlobalPositionTarget()
-	set_position.coordinate_frame = 6  
+    set_position.coordinate_frame = 6  
 	set_position.latitude = my_latit
 	set_position.longitude = my_longit
 	set_position.altitude = 7
