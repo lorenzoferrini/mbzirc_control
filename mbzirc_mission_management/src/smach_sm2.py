@@ -511,34 +511,33 @@ def reaching_cb(user_data):
         sis.stop()
         
         
-    elif locked == 0: #short term recovery
+    # elif locked == 0: #short term recovery
         
-        rospy.loginfo("smach::short term recovery")
-        last_velocity = PositionTarget()
-        last_velocity = dir_pid_data
-        vel_cmd=last_velocity
-        while rospy.Time.from_sec(last_time_locked) < 2 and mode == 'GUIDED':
-            # # gripper checking part
-            # if distLidar<12: 
-            #     #CHIUSURA:1850, APERTURA: 870
-            #     servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, 1850, 0, 0, 0, 0, 0) #chiudi
-            #     rospy.loginfo('str:trovato oggetto vicino')
-            #     #VERIFICARE SE HO LA PALLA O NO
-            #     rospy.sleep(0.5)
-            #     if distLidar<15:
-            #         rospy.loginfo('str:palloncino CATTURATO')
-            #         return 'failed'
-            #     else:
-            #         rospy.loginfo('str:palloncino LOST')
-            #         servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, 870, 0, 0, 0, 0, 0) #apri
-            # command decaying part            
-            # vel_cmd.velocity.x = last_velocity.velocity.x * (2 - rospy.Time.from_sec(last_time_locked))
-            # vel_cmd.velocity.y = last_velocity.velocity.y * (2 - rospy.Time.from_sec(last_time_locked))
-            # vel_cmd.velocity.z = last_velocity.velocity.z * (2 - rospy.Time.from_sec(last_time_locked))
-            # vel_cmd.yaw_rate = last_velocity.yaw_rate * (2 - rospy.Time.from_sec(last_time_locked))
-            # set_velocity_body_command(vel_cmd)
-        
-        return 'searching'
+        # rospy.loginfo("smach::short term recovery")
+        # last_velocity = PositionTarget()
+        # last_velocity = dir_pid_data
+        # vel_cmd=last_velocity
+        # while rospy.Time.from_sec(last_time_locked) < 2 and mode == 'GUIDED':
+        #     # # gripper checking part
+        #     # if distLidar<12: 
+        #     #     #CHIUSURA:1850, APERTURA: 870
+        #     #     servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, 1850, 0, 0, 0, 0, 0) #chiudi
+        #     #     rospy.loginfo('str:trovato oggetto vicino')
+        #     #     #VERIFICARE SE HO LA PALLA O NO
+        #     #     rospy.sleep(0.5)
+        #     #     if distLidar<15:
+        #     #         rospy.loginfo('str:palloncino CATTURATO')
+        #     #         return 'failed'
+        #     #     else:
+        #     #         rospy.loginfo('str:palloncino LOST')
+        #     #         servo_activation = servo_Service(0, mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0, 9, 870, 0, 0, 0, 0, 0) #apri
+        #     # command decaying part            
+        #     # vel_cmd.velocity.x = last_velocity.velocity.x * (2 - rospy.Time.from_sec(last_time_locked))
+        #     # vel_cmd.velocity.y = last_velocity.velocity.y * (2 - rospy.Time.from_sec(last_time_locked))
+        #     # vel_cmd.velocity.z = last_velocity.velocity.z * (2 - rospy.Time.from_sec(last_time_locked))
+        #     # vel_cmd.yaw_rate = last_velocity.yaw_rate * (2 - rospy.Time.from_sec(last_time_locked))
+        #     # set_velocity_body_command(vel_cmd)
+        # return 'searching'
 
 
 @smach.cb_interface(input_keys=[], output_keys=[], outcomes=['finished'])
