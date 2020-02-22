@@ -127,8 +127,8 @@ DirectionalPID::DirectionalPID() {
   task_id = "IDLE";
 
 	//setting pid params
-	Kp(0,0)=0.2;
-	Kd(1,1)=-1;
+	Kp(0,0)=0;
+	Kd(1,1)=0;
 
 }
 
