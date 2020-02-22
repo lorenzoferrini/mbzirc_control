@@ -454,7 +454,7 @@ def auto_cb(user_data):
             previous_wp=previous_wp+1
 
 
-  if mode == 'ALT_HOLD':
+    if mode == 'ALT_HOLD':
         Clear_Mission()
         rospy.loginfo('Stop VideoGet and VideoShow')
         # rec_and_show.stop()
