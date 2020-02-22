@@ -454,7 +454,7 @@ def auto_cb(user_data):
             previous_wp=previous_wp+1
 
 
-  if mode == 'ALT_HOLD':
+    if mode == 'ALT_HOLD':
         Clear_Mission()
         rospy.loginfo('Stop VideoGet and VideoShow')
         # rec_and_show.stop()
@@ -517,8 +517,6 @@ def reaching_cb(user_data):
         last_velocity = PositionTarget()
         last_velocity = dir_pid_data
         vel_cmd=last_velocity
-        print("rospy time is:)
-        print (rospy.Time.from_sec(last_time_locked)
         while rospy.Time.from_sec(last_time_locked) < 2 and mode == 'GUIDED':
             # # gripper checking part
             # if distLidar<12: 
